@@ -1,3 +1,7 @@
+# RYM_VARGANI V1.6.2
+
+Payment-mode consistency fix. The actual `payments.mode` row is now authoritative for Receipt Centre, reports, edit/view state, and historical display. Existing receipt snapshots can be synchronized with `supabase/upgrade-v1.6.2.sql`. New collection forms default to Cash instead of UPI.
+
 # RYM_VARGANI V1.5.8
 
 Mobile/PWA donation management release for Rajasthan Yuvak Mandal and reusable organizations.

@@ -69,7 +69,14 @@ Web browsers do not allow a website to silently attach a file to a preselected W
 - No database migration is required from V1.5.9.
 
 
-## V1.6.3 Payment Pending Status
+## V1.6.4 Payment Pending Status
 - Donors with `Receipt Given - Payment Pending` now show a yellow **Payment Pending** status and their issued Receipt Number in Donors, Pending, and Route Collection views.
 - The status is derived from the actual pending receipt record and automatically disappears when payment is settled to Cash/UPI/Bank/Cheque.
-- No database migration is required for V1.6.3.
+- No database migration is required for V1.6.4.
+
+
+## V1.6.4
+- Day-wise report adds Total Day's Collection = Cash + UPI + Cheque.
+- Payment Pending settlement requires a user-selected Payment Received Date.
+- Receipt Date remains unchanged after settlement.
+- Dashboard date-wise graph uses actual Payment Received Date for paid collections.

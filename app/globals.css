@@ -215,3 +215,14 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
 
 /* RYM_VARGANI branding */
 .brandLogo{width:46px;height:46px;border-radius:50%;object-fit:cover;flex:0 0 auto}.loginBrandLogo{width:88px;height:88px;margin:0 auto 12px;display:block;border-radius:50%;box-shadow:0 4px 16px #0002}.logoBox .brandLogo{width:48px;height:48px}
+
+/* V1.6.3 — receipt-issued payment-pending status */
+.paymentPendingStatus{display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;white-space:nowrap}
+.paymentPendingBadge{display:inline-block;border-radius:30px;padding:5px 10px;font-size:10px;font-weight:800;background:#fff0b8;color:#8a6200;border:1px solid #f1d46a}
+.paymentPendingStatus small{display:block;margin:0;color:#8a6200;font-size:10px;font-weight:600}
+.paymentPendingStatus small b{color:#624600;font-size:10px}
+@media(max-width:760px){
+ .mobilePendingStatus{width:100%;background:#fff8d8;border:1px solid #f1d46a;border-radius:12px;padding:10px 12px;flex-direction:row;align-items:center;justify-content:space-between}
+ .mobilePendingStatus .paymentPendingBadge{padding:6px 10px}
+ .routeCollectionCompact .mobilePendingStatus{margin-top:2px}
+}

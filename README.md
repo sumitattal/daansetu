@@ -67,3 +67,9 @@ Web browsers do not allow a website to silently attach a file to a preselected W
 - Collect amount is pre-filled from last-year donation and remains editable.
 - Collect action uses Save & Send and immediately opens the mobile receipt-sharing flow after saving.
 - No database migration is required from V1.5.9.
+
+
+## V1.6.3 Payment Pending Status
+- Donors with `Receipt Given - Payment Pending` now show a yellow **Payment Pending** status and their issued Receipt Number in Donors, Pending, and Route Collection views.
+- The status is derived from the actual pending receipt record and automatically disappears when payment is settled to Cash/UPI/Bank/Cheque.
+- No database migration is required for V1.6.3.

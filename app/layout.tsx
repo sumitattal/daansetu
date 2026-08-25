@@ -3,10 +3,10 @@ import './globals.css'
 import PwaRegister from './pwa-register'
 
 export const metadata: Metadata = {
-  title: 'DaanSetu — Donation Management',
+  title: 'RYM_VARGANI — Donation Management',
   description: 'Bilingual multi-organization donation and collection management',
   manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, title: 'DaanSetu', statusBarStyle: 'default' },
+  appleWebApp: { capable: true, title: 'RYM_VARGANI', statusBarStyle: 'default' },
   icons: { apple: '/icon-192.png' }
 }
 

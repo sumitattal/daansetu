@@ -177,3 +177,41 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
   .modalFoot{display:grid;grid-template-columns:1fr 1fr}
   .receiptPrintArea{min-width:680px}
 }
+
+/* DaanSetu V1.5.8 - receipt alignment + reports */
+.receiptCanvas .rv{font-family:Arial,Helvetica,sans-serif!important;font-weight:600!important;line-height:1!important;white-space:nowrap;overflow:hidden;text-overflow:clip;background:transparent!important;color:#101010!important;border:0!important;padding:0!important}
+.receiptCanvas .rvNo{left:12.2%!important;top:33.0%!important;width:27%!important;height:4.2%!important;display:flex!important;align-items:center!important;font-size:clamp(10px,1.0vw,17px)!important}
+.receiptCanvas .rvDate{left:79.2%!important;top:33.0%!important;width:17.1%!important;height:4.2%!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:clamp(10px,.98vw,17px)!important;background:#fff0d8!important;z-index:2}
+.receiptCanvas .rvName{left:10.3%!important;top:38.3%!important;width:83%!important;height:4.4%!important;display:flex!important;align-items:center!important;font-size:clamp(10px,1.08vw,18px)!important}
+.receiptCanvas .rvMobile{left:17.8%!important;top:46.2%!important;width:29%!important;height:4.1%!important;display:flex!important;align-items:center!important;font-size:clamp(9px,.98vw,17px)!important}
+.receiptCanvas .rvPan{left:60.9%!important;top:46.2%!important;width:31%!important;height:4.1%!important;display:flex!important;align-items:center!important;font-size:clamp(9px,.98vw,17px)!important}
+.receiptCanvas .rvWords{left:15.9%!important;top:53.4%!important;width:76%!important;height:4.2%!important;display:flex!important;align-items:center!important;font-size:clamp(9px,.96vw,16px)!important}
+.receiptCanvas .rvAmount{left:11.1%!important;top:66.4%!important;width:22.3%!important;height:7.0%!important;display:flex!important;align-items:center!important;justify-content:center!important;color:#cf1515!important;background:#fff!important;font-family:Arial,Helvetica,sans-serif!important;font-weight:700!important;font-size:clamp(14px,1.65vw,29px)!important}
+.receiptCanvas .rvCheque{left:17.3%!important;top:75.8%!important;width:17.0%!important;height:4.0%!important;display:flex!important;align-items:center!important;background:#fff!important;font-size:clamp(9px,.92vw,16px)!important}
+.receiptCanvas .rvBank{left:17.3%!important;top:82.8%!important;width:17.0%!important;height:4.0%!important;display:flex!important;align-items:center!important;background:#fff!important;font-size:clamp(8px,.86vw,15px)!important}
+.receiptCanvas .rvCollector{left:71.5%!important;top:78.5%!important;width:23.5%!important;height:4.2%!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:clamp(8px,.9vw,15px)!important}
+.whatsappBtn{border-color:#25D366!important;color:#117a39!important;font-weight:700!important}
+.dateGraph{margin-top:16px;overflow:hidden}.graphBars{height:245px;display:flex;align-items:flex-end;gap:10px;padding:20px 8px 4px;overflow-x:auto}.graphCol{min-width:54px;height:205px;display:grid;grid-template-rows:26px 1fr 24px;align-items:end;text-align:center}.barValue{font-size:10px;color:#617068;white-space:nowrap;transform:rotate(-35deg);transform-origin:center;position:relative;top:-2px}.barTrack{height:150px;border-radius:9px;background:#eef3ef;display:flex;align-items:flex-end;overflow:hidden}.barTrack span{display:block;width:100%;background:linear-gradient(180deg,#2d7c68,#173d34);border-radius:8px 8px 0 0;min-height:5px}.graphCol small{font-size:10px;color:#66756d}.dayFilter{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}.dayFilter div{display:flex;flex-direction:column}.dayFilter small{color:#77837d;margin-top:3px}.dayFilter input{min-height:44px;border:1px solid #dce5df;border-radius:10px;padding:8px 12px;font:inherit}.collectionReportCard{margin-top:16px}.collectionReportCard table{min-width:1050px}.dayStats{margin-bottom:16px}
+@media(max-width:700px){.dateGraph{padding:12px}.graphBars{height:220px;padding-left:0;padding-right:0}.graphCol{min-width:48px}.barTrack{height:130px}.dayFilter{align-items:stretch;flex-direction:column}.dayFilter input{width:100%;font-size:16px}.dayStats{grid-template-columns:1fr 1fr}.receiptCanvas .rvNo,.receiptCanvas .rvDate{font-size:9px!important}.receiptCanvas .rvName,.receiptCanvas .rvMobile,.receiptCanvas .rvPan,.receiptCanvas .rvWords,.receiptCanvas .rvCollector{font-size:8px!important}.receiptCanvas .rvAmount{font-size:14px!important}.receiptCanvas .rvCheque,.receiptCanvas .rvBank{font-size:8px!important}}
+
+/* DaanSetu V1.5.9 — editable receipts + admin audit */
+.receiptEditGrid{align-items:start}.editAuditNotice{grid-column:1/-1;background:#fff7dd;border:1px solid #f0d98a;border-radius:10px;padding:11px 12px;font-size:12px;color:#66531b;line-height:1.45}.auditCard{margin-top:16px}.auditCard table{min-width:980px}.auditChanges{display:grid;gap:4px;min-width:280px}.auditChanges span{font-size:11px;line-height:1.35;color:#45534c}.auditChanges b{text-transform:capitalize}.receiptEditGrid .check{align-self:end}
+@media(max-width:700px){.receiptEditGrid{grid-template-columns:1fr}.editAuditNotice{font-size:11px}.auditCard{padding:12px}}
+
+/* V1.6.0 mobile Route Collection simplification */
+@media (max-width: 760px){
+  .mobileDonorCard.routeCollectionCompact{padding:16px;gap:14px}
+  .routeCollectionCompact .compactTop{padding-bottom:4px;border-bottom:0}
+  .routeCollectionCompact .mobileDonorTop b{font-size:18px;line-height:1.25}
+  .routeCollectionCompact .mobileDonorTop small{font-size:14px;margin-top:4px}
+  .routeCollectionCompact .mobileRouteRow{margin-top:0}
+  .routeCollectionCompact .routeCompactLastYear{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-radius:14px;background:#f7f9f5}
+  .routeCollectionCompact .routeCompactLastYear span{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#758078}
+  .routeCollectionCompact .routeCompactLastYear b{font-size:18px}
+  .routeCollectionCompact .mobileDonorActions{margin-top:0}
+  .routeCollectionCompact .mobileDonorActions .primary{min-height:52px;font-size:17px}
+  .saveSendBtn{min-height:50px;font-size:16px}
+}
+
+/* RYM_VARGANI branding */
+.brandLogo{width:46px;height:46px;border-radius:50%;object-fit:cover;flex:0 0 auto}.loginBrandLogo{width:88px;height:88px;margin:0 auto 12px;display:block;border-radius:50%;box-shadow:0 4px 16px #0002}.logoBox .brandLogo{width:48px;height:48px}

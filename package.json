@@ -1,6 +1,6 @@
 {
-  "name": "daansetu-final",
-  "version": "1.5.7",
+  "name": "rym-vargani",
+  "version": "1.6.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

@@ -226,3 +226,13 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
  .mobilePendingStatus .paymentPendingBadge{padding:6px 10px}
  .routeCollectionCompact .mobilePendingStatus{margin-top:2px}
 }
+
+/* V1.6.5 receipt search and collected donor state */
+.receiptTableHead .receiptSearch{width:min(390px,100%);min-height:42px}
+.collectedAction,.collectedAction:disabled{background:#e4f6ea!important;border-color:#bfe5cc!important;color:#28784c!important;opacity:1!important;cursor:not-allowed!important;font-weight:800}
+@media(max-width:700px){.receiptTableHead{display:grid!important;grid-template-columns:1fr;gap:12px}.receiptTableHead .receiptSearch{width:100%!important;min-height:46px;font-size:16px}}
+
+/* V1.6.6 Pending route filter + mobile logout */
+.headerActions{display:flex;align-items:center;gap:8px}.mobileLogoutBtn{display:none;border:1px solid #dfd4d4;background:#fff;color:#a13d3d;border-radius:10px;padding:8px 11px;font-weight:700;cursor:pointer}
+@media(max-width:900px){.headerActions{display:flex;gap:6px}.mobileLogoutBtn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;font-size:11px}.shell header h1{max-width:55vw}.shell header>div:first-child{min-width:0}.shell header{gap:8px}}
+@media(max-width:420px){.mobileLogoutBtn{padding:8px 9px;font-size:10px}.langBtn{padding:8px 9px}.shell header h1{max-width:48vw}}

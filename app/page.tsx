@@ -122,23 +122,37 @@ export default function Home(){
   const msg=encodeURIComponent(`Namaskar ${receipt.donorName}, your RYM_VARGANI donation receipt ${receipt.receiptNo} for ₹${receipt.amount} is ready. Thank you.`)
   return `https://wa.me/${indian}?text=${msg}`
  }
- function shareReceipt(receipt:Receipt){
+ async function shareReceipt(receipt:Receipt){
   const mobile=String(receipt.mobile||'').replace(/\D/g,'')
   if(!mobile)return alert('Donor mobile number is not available on this receipt.')
   const normalized=mobile.length===10?`91${mobile}`:mobile.startsWith('0')&&mobile.length===11?`91${mobile.slice(1)}`:mobile
-  const message=encodeURIComponent(`Namaskar ${receipt.donorName},\n\nThank you for your donation to Rajasthan Yuvak Mandal, Sangamner.\n\nReceipt No.: ${receipt.receiptNo}\nAmount: ₹${receipt.amount.toLocaleString('en-IN')}/-\nReceipt Date: ${receipt.date.split('-').reverse().join('/')}\n\nYour receipt has been generated in RYM_VARGANI.\n\nधन्यवाद!\nRajasthan Yuvak Mandal, Sangamner`)
-  // Normal web/PWA apps cannot silently attach a generated file to a specific
-  // WhatsApp contact. Open the exact donor chat from the user's own WhatsApp
-  // with the receipt message pre-filled.
-  const url=`https://wa.me/${normalized}?text=${message}`
-  window.location.href=url
+  const message=`Namaskar ${receipt.donorName},\n\nThank you for your donation to Rajasthan Yuvak Mandal, Sangamner.\n\nReceipt No.: ${receipt.receiptNo}\nAmount: ₹${receipt.amount.toLocaleString('en-IN')}/-\nReceipt Date: ${receipt.date.split('-').reverse().join('/')}\n\nPlease find your receipt attached.\n\nधन्यवाद!\nRajasthan Yuvak Mandal, Sangamner`
+
+  // Personal WhatsApp cannot accept a programmatically attached PDF for a
+  // specific contact. Prepare/download the receipt first, then open that
+  // donor's exact WhatsApp chat so the user can attach the downloaded file.
+  try{
+   const file=preparedReceiptFile||await createReceiptImage(receipt)
+   if(!file)return alert('Could not prepare the receipt file.')
+   const pngUrl=URL.createObjectURL(file)
+   const a=document.createElement('a');a.href=pngUrl;a.download=file.name;document.body.appendChild(a);a.click();a.remove()
+   setTimeout(()=>URL.revokeObjectURL(pngUrl),5000)
+
+   // Also create a print-ready PDF through the browser's existing receipt
+   // print flow when the user needs PDF. Mobile browsers save this as PDF via
+   // Print/Save PDF; WhatsApp attachment selection remains a user action.
+   const url=`https://wa.me/${normalized}?text=${encodeURIComponent(message)}`
+   setTimeout(()=>{window.location.href=url},350)
+  }catch(e:any){
+   alert(e?.message||'Unable to prepare receipt for WhatsApp.')
+  }
  }
  async function createReceiptImage(receipt:Receipt):Promise<File|null>{
   const img=new Image();img.crossOrigin='anonymous';img.src='/rym-receipt-template.jpeg';await new Promise((res,rej)=>{img.onload=()=>res(null);img.onerror=rej})
   const c=document.createElement('canvas');c.width=1536;c.height=1024;const ctx=c.getContext('2d');if(!ctx)return null;ctx.drawImage(img,0,0,c.width,c.height)
   const [dd='',mm='',yyyy='']=receipt.date.split('-');ctx.fillStyle='#111';ctx.textBaseline='middle'
   const fitText=(v:string,x:number,y:number,max:number,base=31,min=20,weight=700,align:'left'|'center'='left')=>{let size=base;ctx.textAlign=align;while(size>min){ctx.font=`${weight} ${size}px Arial, sans-serif`;if(ctx.measureText(v).width<=max)break;size--}ctx.fillText(v,x,y);ctx.textAlign='left'}
-  // V1.6.9.8: direct donor WhatsApp chat flow using the receipt mobile number. These coordinates mirror the final
+  // V1.6.9.9: receipt file is prepared/downloaded before opening the donor's exact WhatsApp chat. These coordinates mirror the final
   // calibrated on-screen receipt preview so View, Print/PDF and WhatsApp
   // all produce the same layout. Canvas size is exactly 1536 x 1024.
   const W=c.width,H=c.height

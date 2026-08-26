@@ -298,7 +298,7 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
 }
 .receiptCanvas .rvDate{
   left:79.0%!important;
-  top:30.7%!important;
+  top:31.090625%!important;
   width:17.8%!important;
   height:9.0%!important;
   justify-content:center!important;
@@ -328,4 +328,40 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
   .receiptCanvas .rvDate{font-size:16px!important}
   .receiptCanvas .rvName{font-size:18px!important}
   .receiptCanvas .rvAmount{font-size:23px!important}
+}
+
+/* ===== RYM_VARGANI V1.6.9.6 date slight-up alignment =====
+   Move generated date to donor-name row level to avoid the pre-printed date placeholders. */
+.receiptCanvas .rvDate{
+  left:79.0%!important;
+  top:37.86875%!important;
+  width:17.8%!important;
+  height:5.4%!important;
+  justify-content:center!important;
+  align-items:center!important;
+  background:rgb(255,239,216)!important;
+  box-shadow:0 0 0 2px rgb(255,239,216)!important;
+  z-index:10!important;
+}
+@media(max-width:700px){
+  .receiptCanvas .rvDate{font-size:16px!important}
+}
+
+
+/* ===== RYM_VARGANI V1.6.9.7 receipt date / report permission release =====
+   Date position matches the user-marked top-right box. */
+.receiptCanvas .rvDate{
+  left:82.1%!important;
+  top:34.2%!important;
+  width:15.4%!important;
+  height:5.6%!important;
+  justify-content:center!important;
+  align-items:center!important;
+  background:rgb(255,239,216)!important;
+  box-shadow:0 0 0 3px rgb(255,239,216)!important;
+  z-index:12!important;
+  font-size:clamp(16px,1.6vw,30px)!important;
+}
+@media(max-width:700px){
+  .receiptCanvas .rvDate{font-size:16px!important}
 }

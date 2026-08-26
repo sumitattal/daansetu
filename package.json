@@ -1,6 +1,6 @@
 {
   "name": "rym-vargani",
-  "version": "1.6.9.2",
+  "version": "1.6.9.8",
   "private": true,
   "scripts": {
     "dev": "next dev",

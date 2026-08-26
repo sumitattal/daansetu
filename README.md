@@ -80,3 +80,7 @@ Web browsers do not allow a website to silently attach a file to a preselected W
 - Payment Pending settlement requires a user-selected Payment Received Date.
 - Receipt Date remains unchanged after settlement.
 - Dashboard date-wise graph uses actual Payment Received Date for paid collections.
+
+
+## V1.6.7 WhatsApp sharing
+Receipt images are prepared while the preview is open so native Android/iOS sharing is invoked directly from the WhatsApp button tap. This avoids the browser user-gesture error seen when image generation happened after the tap. Save & Send opens the donor WhatsApp chat safely after the donation is saved.

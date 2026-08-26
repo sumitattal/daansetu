@@ -31,11 +31,13 @@ export default function Home(){
  const [loading,setLoading]=useState(true);const [session,setSession]=useState<any>(null);const [profile,setProfile]=useState<AppUser|null>(null);const [orgId,setOrgId]=useState('');const [orgName,setOrgName]=useState('Rajasthan Yuvak Mandal')
  const [login,setLogin]=useState({username:'',password:''});const [loginError,setLoginError]=useState('');const [dayReportDate,setDayReportDate]=useState(new Date().toISOString().slice(0,10))
  const [active,setActive]=useState('dashboard');const [routes,setRoutes]=useState<RouteRow[]>([]);const [donors,setDonors]=useState<Donor[]>([]);const [members,setMembers]=useState<Member[]>([]);const [receipts,setReceipts]=useState<Receipt[]>([]);const [users,setUsers]=useState<AppUser[]>([]);const [receiptAudits,setReceiptAudits]=useState<ReceiptAudit[]>([])
- const [selectedRoute,setSelectedRoute]=useState('');const [pendingRoute,setPendingRoute]=useState('');const [q,setQ]=useState('');const [modal,setModal]=useState<string|null>(null);const [editReceipt,setEditReceipt]=useState<Receipt|null>(null);const [editReceiptForm,setEditReceiptForm]=useState({receiptNo:'',donorName:'',mobile:'',pan:'',date:'',amount:'',mode:'Cash',chequeNo:'',bankName:'',areaName:'',is80g:false,reason:''});const [selectedDonorIds,setSelectedDonorIds]=useState<string[]>([]);const [collectRouteEdit,setCollectRouteEdit]=useState(false);const [editingUser,setEditingUser]=useState<AppUser|null>(null);const [selected,setSelected]=useState<Donor|null>(null);const [viewReceipt,setViewReceipt]=useState<Receipt|null>(null);const [preview,setPreview]=useState<ImportPreview|null>(null);const fileRef=useRef<HTMLInputElement>(null)
+ const [selectedRoute,setSelectedRoute]=useState('');const [pendingRoute,setPendingRoute]=useState('');const [q,setQ]=useState('');const [modal,setModal]=useState<string|null>(null);const [editReceipt,setEditReceipt]=useState<Receipt|null>(null);const [editReceiptForm,setEditReceiptForm]=useState({receiptNo:'',donorName:'',mobile:'',pan:'',date:'',amount:'',mode:'Cash',chequeNo:'',bankName:'',areaName:'',is80g:false,reason:''});const [selectedDonorIds,setSelectedDonorIds]=useState<string[]>([]);const [collectRouteEdit,setCollectRouteEdit]=useState(false);const [editingUser,setEditingUser]=useState<AppUser|null>(null);const [selected,setSelected]=useState<Donor|null>(null);const [viewReceipt,setViewReceipt]=useState<Receipt|null>(null);const [preparedReceiptFile,setPreparedReceiptFile]=useState<File|null>(null);const [receiptSharePreparing,setReceiptSharePreparing]=useState(false);const [preview,setPreview]=useState<ImportPreview|null>(null);const fileRef=useRef<HTMLInputElement>(null)
  const [form,setForm]=useState({name:'',contactPerson:'',mobile:'',reference:'',routeId:'',expected:'',lastYear:'',lastReceipt:'',amount:'',receiptNumber:'',collectionDate:new Date().toISOString().slice(0,10),mode:'Cash',pan:'',is80g:false,chequeNo:'',bankName:'',memberName:'',memberMobile:'',birthDate:'',newRoute:'',userName:'',userMobile:'',username:'',password:'',role:'Volunteer' as Role,userActive:true})
  const isAdmin=profile&&['Super Admin','Admin'].includes(profile.role);const isSuperAdmin=profile?.role==='Super Admin'
 
  useEffect(()=>{if(!supabase){setLoading(false);return}supabase.auth.getSession().then(({data})=>{setSession(data.session);if(data.session)loadAll(data.session.user.id);else setLoading(false)});const {data:sub}=supabase.auth.onAuthStateChange((_e,s)=>{setSession(s);if(!s){setProfile(null);setLoading(false)}});return()=>sub.subscription.unsubscribe()},[])
+
+ useEffect(()=>{let cancelled=false;if(modal!=='receipt'||!viewReceipt){setPreparedReceiptFile(null);setReceiptSharePreparing(false);return}setPreparedReceiptFile(null);setReceiptSharePreparing(true);createReceiptImage(viewReceipt).then(file=>{if(!cancelled)setPreparedReceiptFile(file)}).catch(()=>{if(!cancelled)setPreparedReceiptFile(null)}).finally(()=>{if(!cancelled)setReceiptSharePreparing(false)});return()=>{cancelled=true}},[modal,viewReceipt])
 
  async function loadAll(userId?:string){
   if(!supabase)return;setLoading(true)
@@ -89,15 +91,16 @@ export default function Home(){
   const amount=parseMoney(form.amount);if(amount<=0)return alert('Enter a valid amount.')
   if(form.mode==='Cheque'&&!form.chequeNo.trim())return alert('Cheque Number is compulsory for cheque payment.')
   if(!form.collectionDate)return alert('Select collection date.')
+  const whatsappWindow=sendAfterSave?window.open('about:blank','_blank'):null
   const isPaymentPending=form.mode==='Receipt Given - Payment Pending';const modeForDb=isPaymentPending?'other':form.mode.toLowerCase()
   const {data,error}=await supabase.rpc('record_donation',{p_donor_id:selected.id,p_amount:amount,p_mode:modeForDb,p_is_80g:form.is80g,p_pan:form.pan||selected.pan||null,p_cheque_no:form.chequeNo||null,p_bank_name:form.bankName||null,p_receipt_number:form.receiptNumber.trim()||null,p_payment_date:form.collectionDate,p_payment_pending:isPaymentPending})
-  if(error)return alert(error.message)
+  if(error){if(whatsappWindow&&!whatsappWindow.closed)whatsappWindow.close();return alert(error.message)}
   setModal(null);resetForm();await loadAll()
   const r=Array.isArray(data)?data[0]:data
   if(r){
    const issuedReceipt:Receipt={id:r.id,paymentId:r.payment_id,receiptNo:r.receipt_number,donorId:selected.id,donorName:r.donor_name_snapshot,mobile:r.donor_mobile_snapshot||'',amount,amountWords:r.amount_words_snapshot,date:new Date(form.collectionDate+'T00:00:00').toLocaleDateString('en-GB').replaceAll('/','-'),paymentReceivedDate:isPaymentPending?'':new Date(form.collectionDate+'T00:00:00').toLocaleDateString('en-GB').replaceAll('/','-'),mode:r.payment_mode_snapshot,paymentStatus:isPaymentPending?'receipt_pending':'paid',type:r.receipt_type==='80g'?'80G':'Normal',pan:r.donor_pan_snapshot||'',areaName:r.area_name_snapshot||selected.route||'',collector:r.collected_by_name_snapshot,chequeNo:r.cheque_number_snapshot||'',bankName:r.bank_name_snapshot||''}
    setViewReceipt(issuedReceipt);setModal('receipt')
-   if(sendAfterSave)await shareReceipt(issuedReceipt)
+   if(sendAfterSave){const url=whatsappUrl(issuedReceipt);if(whatsappWindow&&!whatsappWindow.closed)whatsappWindow.location.href=url;else window.location.href=url}
   }
  }
  async function settlePendingReceipt(receipt:Receipt){
@@ -113,31 +116,55 @@ export default function Home(){
   if(error)return alert(error.message)
   await loadAll();alert('Payment status updated successfully.')
  }
+ function whatsappUrl(receipt:Receipt){
+  const mobile=String(receipt.mobile||'').replace(/\D/g,'')
+  const indian=mobile.length===10?`91${mobile}`:mobile
+  const msg=encodeURIComponent(`Namaskar ${receipt.donorName}, your RYM_VARGANI donation receipt ${receipt.receiptNo} for ₹${receipt.amount} is ready. Thank you.`)
+  return `https://wa.me/${indian}?text=${msg}`
+ }
  async function shareReceipt(receipt:Receipt){
-  try{
-   const file=await createReceiptImage(receipt)
-   const nav:any=navigator
-   if(file&&nav.share&&nav.canShare?.({files:[file]})){
+  const nav:any=navigator
+  const file=preparedReceiptFile
+  if(file&&nav.share&&(!nav.canShare||nav.canShare({files:[file]}))){
+   try{
     await nav.share({title:`RYM_VARGANI Receipt ${receipt.receiptNo}`,text:`Thank you ${receipt.donorName}. Receipt ${receipt.receiptNo} for ₹${receipt.amount}.`,files:[file]})
     return
+   }catch(e:any){
+    if(e?.name==='AbortError')return
    }
-   const mobile=String(receipt.mobile||'').replace(/\D/g,'')
-   const indian=mobile.length===10?`91${mobile}`:mobile
-   const msg=encodeURIComponent(`Namaskar ${receipt.donorName}, your RYM_VARGANI donation receipt ${receipt.receiptNo} for ₹${receipt.amount} is ready. Thank you.`)
-   window.open(`https://wa.me/${indian}?text=${msg}`,'_blank')
-   alert('Your browser cannot attach the receipt automatically. WhatsApp chat has been opened; use Print / Save PDF or the mobile Share option to attach the receipt.')
-  }catch(e:any){if(e?.name!=='AbortError')alert(e.message||'Could not share receipt.')}
+  }
+  window.open(whatsappUrl(receipt),'_blank')
  }
  async function createReceiptImage(receipt:Receipt):Promise<File|null>{
   const img=new Image();img.crossOrigin='anonymous';img.src='/rym-receipt-template.jpeg';await new Promise((res,rej)=>{img.onload=()=>res(null);img.onerror=rej})
   const c=document.createElement('canvas');c.width=1536;c.height=1024;const ctx=c.getContext('2d');if(!ctx)return null;ctx.drawImage(img,0,0,c.width,c.height)
-  const [dd='',mm='',yyyy='']=receipt.date.split('-');ctx.fillStyle='#151515';ctx.textBaseline='middle';ctx.font='600 25px Arial, sans-serif'
-  const text=(v:string,x:number,y:number,max?:number)=>{if(max){let size=25;while(size>15){ctx.font=`600 ${size}px Arial, sans-serif`;if(ctx.measureText(v).width<=max)break;size--}}ctx.fillText(v,x,y);ctx.font='600 25px Arial, sans-serif'}
-  text(receipt.receiptNo,188,351,390);text(`${dd} / ${mm} / ${yyyy}`,1230,351,250);text(receipt.donorName,162,414,1270);text(receipt.mobile||'',272,494,430);text(receipt.pan||'',934,494,430);text(receipt.amountWords,245,568,1120)
-  ctx.fillStyle='#d31313';ctx.font='700 42px Arial, sans-serif';ctx.textAlign='center';ctx.fillText(`₹ ${new Intl.NumberFormat('en-IN').format(receipt.amount)}/-`,340,720);ctx.textAlign='left';ctx.fillStyle='#151515';ctx.font='600 25px Arial, sans-serif'
-  if(receipt.mode.toLowerCase()==='cheque'){text(receipt.chequeNo||'',260,798,270);text(receipt.bankName||'',260,868,270)}
-  ctx.textAlign='center';ctx.fillText(receipt.collector,1280,824,310);ctx.textAlign='left'
+  const [dd='',mm='',yyyy='']=receipt.date.split('-');ctx.fillStyle='#111';ctx.textBaseline='middle'
+  const fitText=(v:string,x:number,y:number,max:number,base=31,min=20,weight=700,align:'left'|'center'='left')=>{let size=base;ctx.textAlign=align;while(size>min){ctx.font=`${weight} ${size}px Arial, sans-serif`;if(ctx.measureText(v).width<=max)break;size--}ctx.fillText(v,x,y);ctx.textAlign='left'}
+  // V1.6.9: calibrated against the actual printed RYM receipt template (1536 x 1024).
+  // Keep values inside the blank fields and above the blue writing rules.
+  fitText(receipt.receiptNo,205,360,330,34,22,700)
+  // Completely cover the pre-printed date placeholders, then render one clean date string.
+  ctx.fillStyle='#fff0d8';ctx.fillRect(1178,322,308,70);ctx.fillStyle='#111';fitText(`${dd} / ${mm} / ${yyyy}`,1333,360,286,32,22,700,'center')
+  fitText(receipt.donorName,155,424,1250,36,22,700)
+  fitText(receipt.mobile||'',275,505,430,33,22,700)
+  fitText(receipt.pan||'',930,525,440,32,21,700)
+  fitText(receipt.amountWords,250,587,925,32,20,700)
+  ctx.fillStyle='#c91414';fitText(`₹ ${new Intl.NumberFormat('en-IN').format(receipt.amount)}/-`,335,705,320,46,30,700,'center');ctx.fillStyle='#111'
+  if(receipt.mode.toLowerCase()==='cheque'){fitText(receipt.chequeNo||'',258,815,280,30,20,700);fitText(receipt.bankName||'',258,875,280,29,19,700)}
+  fitText(receipt.collector,1280,845,320,30,19,700,'center')
   const blob=await new Promise<Blob|null>(resolve=>c.toBlob(resolve,'image/png',1));return blob?new File([blob],`RYM_VARGANI-${receipt.receiptNo.replace(/[^A-Za-z0-9_-]/g,'-')}.png`,{type:'image/png'}):null
+ }
+ async function printReceipt(receipt:Receipt){
+  // Open synchronously from the click so mobile/desktop browsers do not block it.
+  const win=window.open('','_blank','width=1200,height=850')
+  if(!win)return alert('Please allow pop-ups for RYM_VARGANI to print the receipt.')
+  win.document.write('<!doctype html><html><head><title>Preparing receipt...</title></head><body style="font-family:Arial,sans-serif;padding:24px">Preparing receipt...</body></html>')
+  try{
+   const file=preparedReceiptFile||await createReceiptImage(receipt);if(!file){win.close();return alert('Could not prepare receipt for printing.')}
+   const url=URL.createObjectURL(file)
+   win.document.open();win.document.write(`<!doctype html><html><head><title>Receipt ${receipt.receiptNo}</title><style>@page{size:landscape;margin:6mm}html,body{margin:0;padding:0;background:#fff}body{display:flex;align-items:flex-start;justify-content:center}img{display:block;width:100%;max-width:100%;height:auto;page-break-inside:avoid;break-inside:avoid;print-color-adjust:exact;-webkit-print-color-adjust:exact}@media print{html,body{width:100%;height:auto;overflow:visible}img{width:100%;height:auto}}</style></head><body><img id="r" src="${url}" alt="Receipt"></body></html>`);win.document.close()
+   const ri=win.document.getElementById('r') as HTMLImageElement|null;if(ri)ri.onload=()=>{setTimeout(()=>{win.focus();win.print();setTimeout(()=>URL.revokeObjectURL(url),5000)},120)}
+  }catch(e:any){win.close();alert(e?.message||'Unable to print receipt.')}
  }
  function resetForm(){setForm({name:'',contactPerson:'',mobile:'',reference:'',routeId:'',expected:'',lastYear:'',lastReceipt:'',amount:'',receiptNumber:'',collectionDate:new Date().toISOString().slice(0,10),mode:'Cash',pan:'',is80g:false,chequeNo:'',bankName:'',memberName:'',memberMobile:'',birthDate:'',newRoute:'',userName:'',userMobile:'',username:'',password:'',role:'Volunteer',userActive:true})}
 
@@ -267,7 +294,7 @@ export default function Home(){
  {(modal==='importDonors'||modal==='importMembers')&&<div className="importBody"><div className="importInfo"><b>{modal==='importDonors'?'Donor Name* · Contact Person · Mobile Number · PAN Number (Optional) · Reference (Optional) · Last Year Donation · Last Year Receipt Number · Route':'Name of Member* · Mobile Number* · Birth Date'}</b><button className="ghost compact" onClick={()=>downloadTemplate(modal==='importDonors'?'donors':'members')}>↓ {L.downloadTemplate}</button></div><label className="dropzone"><span>⇧</span><b>{L.upload}</b><small>.xlsx, .xls, .csv</small><input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={e=>handleFile(e.target.files?.[0],modal==='importDonors'?'donors':'members')}/></label>{preview&&<><div className="importSummary"><div><small>Valid rows</small><b>{preview.valid.length}</b></div><div className={preview.invalid.length?'hasErrors':''}><small>Invalid rows</small><b>{preview.invalid.length}</b></div><span>{preview.fileName}</span></div>{preview.invalid.length>0&&<div className="errorList">{preview.invalid.slice(0,10).map((x,i)=><span key={i}>Row {x.row}: {x.reason}</span>)}</div>}</>}</div>}
  {modal==='editReceipt'&&editReceipt&&<div className="formGrid receiptEditGrid"><Field label="Receipt Number *"><input value={editReceiptForm.receiptNo} onChange={e=>setEditReceiptForm({...editReceiptForm,receiptNo:e.target.value})}/></Field><Field label="Donor Name *"><input value={editReceiptForm.donorName} onChange={e=>setEditReceiptForm({...editReceiptForm,donorName:e.target.value})}/></Field><Field label="Mobile Number"><input value={editReceiptForm.mobile} onChange={e=>setEditReceiptForm({...editReceiptForm,mobile:e.target.value})}/></Field><Field label="PAN"><input value={editReceiptForm.pan} onChange={e=>setEditReceiptForm({...editReceiptForm,pan:e.target.value.toUpperCase()})}/></Field><Field label="Collection Date *"><input type="date" value={editReceiptForm.date} onChange={e=>setEditReceiptForm({...editReceiptForm,date:e.target.value})}/></Field><Field label="Amount *"><input type="number" value={editReceiptForm.amount} onChange={e=>setEditReceiptForm({...editReceiptForm,amount:e.target.value})}/></Field><Field label="Payment Mode"><select value={editReceiptForm.mode} onChange={e=>setEditReceiptForm({...editReceiptForm,mode:e.target.value})}><option>Cash</option><option>UPI</option><option>Bank</option><option>Cheque</option><option>Receipt Given - Payment Pending</option></select></Field><Field label="Area / Route on Receipt"><input value={editReceiptForm.areaName} onChange={e=>setEditReceiptForm({...editReceiptForm,areaName:e.target.value})}/></Field>{editReceiptForm.mode==='Cheque'&&<><Field label="Cheque Number *"><input value={editReceiptForm.chequeNo} onChange={e=>setEditReceiptForm({...editReceiptForm,chequeNo:e.target.value})}/></Field><Field label="Bank Name"><input value={editReceiptForm.bankName} onChange={e=>setEditReceiptForm({...editReceiptForm,bankName:e.target.value})}/></Field></>}<label className="check"><input type="checkbox" checked={editReceiptForm.is80g} onChange={e=>setEditReceiptForm({...editReceiptForm,is80g:e.target.checked})}/><span>80G Receipt</span></label><Field label={`${L.editReason} (${L.optional})`}><input value={editReceiptForm.reason} onChange={e=>setEditReceiptForm({...editReceiptForm,reason:e.target.value})} placeholder="Correction / reason for change"/></Field><div className="editAuditNotice">This edit will be recorded in the Admin audit log. Nothing about the edit will be printed on the donor receipt.</div></div>}
  {modal==='receipt'&&viewReceipt&&<div className="receiptBody"><ReceiptDesign receipt={viewReceipt}/></div>}
- <div className="modalFoot noPrint"><button className="ghost" onClick={()=>{setModal(null);setPreview(null);setEditingUser(null)}}>{L.cancel}</button>{modal==='receipt'?<><button className="ghost whatsappBtn" onClick={()=>viewReceipt&&shareReceipt(viewReceipt)}>WhatsApp</button><button className="primary" onClick={()=>window.print()}>🖨 Print / Save PDF</button></>:modal==='editReceipt'?<button className="primary" onClick={saveReceiptEdit}>{L.saveReceiptChanges}</button>:(modal==='importDonors'||modal==='importMembers')?<button className="primary" disabled={!preview?.valid.length} onClick={importRows}>{L.import} {preview?.valid.length?`(${preview.valid.length})`:''}</button>:modal==='collect'?<button className="primary saveSendBtn" onClick={()=>collect(true)}>💬 {L.saveAndSend}</button>:<button className="primary" onClick={modal==='donor'?addDonor:modal==='member'?addMember:modal==='user'?addUser:modal==='editUser'?updateUser:addRoute}>{L.save}</button>}</div></div></div>}
+ <div className="modalFoot noPrint"><button className="ghost" onClick={()=>{setModal(null);setPreview(null);setEditingUser(null)}}>{L.cancel}</button>{modal==='receipt'?<><button className="ghost whatsappBtn" disabled={receiptSharePreparing} onClick={()=>viewReceipt&&shareReceipt(viewReceipt)}>{receiptSharePreparing?'Preparing Receipt…':'WhatsApp'}</button><button className="primary" onClick={()=>viewReceipt&&printReceipt(viewReceipt)}>🖨 Print / Save PDF</button></>:modal==='editReceipt'?<button className="primary" onClick={saveReceiptEdit}>{L.saveReceiptChanges}</button>:(modal==='importDonors'||modal==='importMembers')?<button className="primary" disabled={!preview?.valid.length} onClick={importRows}>{L.import} {preview?.valid.length?`(${preview.valid.length})`:''}</button>:modal==='collect'?<button className="primary saveSendBtn" onClick={()=>collect(true)}>💬 {L.saveAndSend}</button>:<button className="primary" onClick={modal==='donor'?addDonor:modal==='member'?addMember:modal==='user'?addUser:modal==='editUser'?updateUser:addRoute}>{L.save}</button>}</div></div></div>}
  </div>
 }
 
@@ -283,7 +310,7 @@ function ReceiptCentre({receipts,only80g,onView,onEdit}:{receipts:Receipt[],only
   .filter(r=>!query||`${r.receiptNo} ${r.donorName} ${r.mobile} ${r.date} ${r.mode} ${r.collector}`.toLowerCase().includes(query))
   .sort((a,b)=>b.receiptNo.localeCompare(a.receiptNo,undefined,{numeric:true,sensitivity:'base'}))
  return <section className="card donorCard"><div className="tableHead receiptTableHead"><div><b>{only80g?'80G Receipts':'Receipt Centre'}</b><small>{rows.length} receipt(s) · {money(rows.reduce((s,r)=>s+r.amount,0))} · Receipt No. high to low</small></div><input className="search receiptSearch" placeholder="Search receipt no., donor, mobile, date or mode" value={receiptSearch} onChange={e=>setReceiptSearch(e.target.value)}/></div><div className="tableWrap"><table><thead><tr><th>Receipt No.</th><th>Donor</th><th>Date</th><th>Type</th><th>Mode</th><th>Collector</th><th>Amount</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><b>{r.receiptNo}</b></td><td>{r.donorName}<small>{r.mobile}</small></td><td>{r.date}</td><td>{r.type}</td><td>{r.mode}</td><td>{r.collector}</td><td><b>{money(r.amount)}</b></td><td><div className="rowActions"><button className="smallBtn" onClick={()=>onView(r)}>View / Print</button><button className="smallBtn" onClick={()=>onEdit(r)}>✎ Edit Receipt</button></div></td></tr>)}</tbody></table>{!rows.length&&<div className="empty">{query?'No matching receipts.':'No receipts yet.'}</div>}</div></section>}
-function ReceiptDesign({receipt}:{receipt:Receipt}){const [dd='',mm='',yyyy='']=receipt.date.split('-');return <div className="receiptPrintArea"><div className="receiptCanvas"><img src="/rym-receipt-template.jpeg" alt="Donation receipt"/><div className="rv rvNo">{receipt.receiptNo}</div><div className="rv rvDate">{dd}&nbsp;&nbsp;/&nbsp;&nbsp;{mm}&nbsp;&nbsp;/&nbsp;&nbsp;{yyyy}</div><div className="rv rvName">{receipt.donorName}</div>{receipt.mobile&&<div className="rv rvMobile">{receipt.mobile}</div>}{receipt.pan&&<div className="rv rvPan">{receipt.pan}</div>}<div className="rv rvWords">{receipt.amountWords}</div><div className="rv rvAmount"><span>₹</span>{new Intl.NumberFormat('en-IN').format(receipt.amount)}/-</div>{receipt.mode.toLowerCase()==='cheque'&&<><div className="rv rvCheque">{receipt.chequeNo}</div>{receipt.bankName&&<div className="rv rvBank">{receipt.bankName}</div>}</>}<div className="rv rvCollector">{receipt.collector}</div></div></div>}
+function ReceiptDesign({receipt}:{receipt:Receipt}){const [dd='',mm='',yyyy='']=receipt.date.split('-');return <div className="receiptPrintArea"><div className="receiptCanvas"><img src="/rym-receipt-template.jpeg" alt="Donation receipt"/><div className="rv rvNo">{receipt.receiptNo}</div><div className="rv rvDate">{dd} / {mm} / {yyyy}</div><div className="rv rvName">{receipt.donorName}</div>{receipt.mobile&&<div className="rv rvMobile">{receipt.mobile}</div>}{receipt.pan&&<div className="rv rvPan">{receipt.pan}</div>}<div className="rv rvWords">{receipt.amountWords}</div><div className="rv rvAmount">₹ {new Intl.NumberFormat('en-IN').format(receipt.amount)}/-</div>{receipt.mode.toLowerCase()==='cheque'&&<><div className="rv rvCheque">{receipt.chequeNo}</div>{receipt.bankName&&<div className="rv rvBank">{receipt.bankName}</div>}</>}<div className="rv rvCollector">{receipt.collector}</div></div></div>}
 
 function DatewiseGraph({receipts}:{receipts:Receipt[]}){
  const paid=receipts.filter(r=>r.paymentStatus==='paid'&&r.paymentReceivedDate);const by=new Map<string,number>();for(const r of paid)by.set(r.paymentReceivedDate,(by.get(r.paymentReceivedDate)||0)+r.amount)
@@ -314,16 +341,17 @@ function Reports({donors,receipts}:{donors:Donor[],receipts:Receipt[]}){
     'ContactNumber':r.mobile||donor?.mobile||'',
     'PAN':r.pan||donor?.pan||'',
     'ReceiptNumber':r.receiptNo,
-    'Date':r.date,
+    'ReceiptDate':r.date,
+    'CollectionDate':r.paymentReceivedDate||r.date,
     'AreaName':r.areaName||donor?.route||'',
     'ModeofPayment':r.mode,
     'Amount':r.amount
    }
   })
-  const ws=XLSX.utils.json_to_sheet(rows,{header:['Sr No.','DonarName','ContactNumber','PAN','ReceiptNumber','Date','AreaName','ModeofPayment','Amount']})
-  ws['!cols']=[{wch:8},{wch:30},{wch:18},{wch:16},{wch:24},{wch:14},{wch:28},{wch:28},{wch:14}]
+  const ws=XLSX.utils.json_to_sheet(rows,{header:['Sr No.','DonarName','ContactNumber','PAN','ReceiptNumber','ReceiptDate','CollectionDate','AreaName','ModeofPayment','Amount']})
+  ws['!cols']=[{wch:8},{wch:30},{wch:18},{wch:16},{wch:24},{wch:14},{wch:16},{wch:28},{wch:28},{wch:14}]
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Collection Report')
   XLSX.writeFile(wb,`RYM_VARGANI-Collection-Report-${new Date().toISOString().slice(0,10)}.xlsx`)
  }
- return <><section className="stats"><Stat label="Receipted Collection" value={money(total)} icon="₹" accent/><Stat label="Receipts Issued" value={String(receipts.length)} icon="▤"/><Stat label="80G" value={money(receipts.filter(r=>r.type==='80G').reduce((s,r)=>s+r.amount,0))} icon="✦"/><Stat label="Pending" value={money(pending)} icon="◷" warn/></section><section className="card reportDownloadCard"><div><b>Donor Collection Report</b><small>Sr No. · DonarName · ContactNumber · PAN · ReceiptNumber · Date · AreaName · ModeofPayment · Amount</small></div><button className="primary" onClick={downloadExcel}>↓ Download Collection Excel</button></section><section className="card collectionReportCard"><div className="tableWrap"><table><thead><tr><th>Sr No.</th><th>Donor</th><th>Contact</th><th>PAN</th><th>Receipt No.</th><th>Date</th><th>Area</th><th>Mode</th><th>Amount</th></tr></thead><tbody>{receipts.map((r,i)=><tr key={r.id}><td>{i+1}</td><td>{r.donorName}</td><td>{r.mobile}</td><td>{r.pan||'—'}</td><td>{r.receiptNo}</td><td>{r.date}</td><td>{r.areaName}</td><td>{r.mode}</td><td><b>{money(r.amount)}</b></td></tr>)}</tbody></table></div></section><section className="grid2"><div className="card"><b>Payment Mode Report</b><div className="reportRows">{modes.map(x=><div key={x.mode}><span>{x.mode}</span><b>{money(x.amount)}</b></div>)}</div></div><div className="card"><b>Route-wise Report</b><div className="reportRows">{routeNames.map(route=>{const ds=donors.filter(d=>d.route===route);return <div key={route}><span>{route}<small>{ds.length} donors · Pending {money(ds.reduce((s,d)=>s+Math.max(0,d.expected-d.received),0))}</small></span><b>{money(ds.reduce((s,d)=>s+d.received,0))}</b></div>})}</div></div></section></>
+ return <><section className="stats"><Stat label="Receipted Collection" value={money(total)} icon="₹" accent/><Stat label="Receipts Issued" value={String(receipts.length)} icon="▤"/><Stat label="80G" value={money(receipts.filter(r=>r.type==='80G').reduce((s,r)=>s+r.amount,0))} icon="✦"/><Stat label="Pending" value={money(pending)} icon="◷" warn/></section><section className="card reportDownloadCard"><div><b>Donor Collection Report</b><small>Sr No. · DonarName · ContactNumber · PAN · ReceiptNumber · ReceiptDate · CollectionDate · AreaName · ModeofPayment · Amount</small></div><button className="primary" onClick={downloadExcel}>↓ Download Collection Excel</button></section><section className="card collectionReportCard"><div className="tableWrap"><table><thead><tr><th>Sr No.</th><th>Donor</th><th>Contact</th><th>PAN</th><th>Receipt No.</th><th>Receipt Date</th><th>Collection Date</th><th>Area</th><th>Mode</th><th>Amount</th></tr></thead><tbody>{receipts.map((r,i)=><tr key={r.id}><td>{i+1}</td><td>{r.donorName}</td><td>{r.mobile}</td><td>{r.pan||'—'}</td><td>{r.receiptNo}</td><td>{r.date}</td><td>{r.paymentReceivedDate||r.date}</td><td>{r.areaName}</td><td>{r.mode}</td><td><b>{money(r.amount)}</b></td></tr>)}</tbody></table></div></section><section className="grid2"><div className="card"><b>Payment Mode Report</b><div className="reportRows">{modes.map(x=><div key={x.mode}><span>{x.mode}</span><b>{money(x.amount)}</b></div>)}</div></div><div className="card"><b>Route-wise Report</b><div className="reportRows">{routeNames.map(route=>{const ds=donors.filter(d=>d.route===route);return <div key={route}><span>{route}<small>{ds.length} donors · Pending {money(ds.reduce((s,d)=>s+Math.max(0,d.expected-d.received),0))}</small></span><b>{money(ds.reduce((s,d)=>s+d.received,0))}</b></div>})}</div></div></section></>
 }

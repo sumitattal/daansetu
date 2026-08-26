@@ -30,7 +30,7 @@ export default function Home(){
  const [lang,setLang]=useState<Lang>('en');const L=tr[lang]
  const [loading,setLoading]=useState(true);const [session,setSession]=useState<any>(null);const [profile,setProfile]=useState<AppUser|null>(null);const [orgId,setOrgId]=useState('');const [orgName,setOrgName]=useState('Rajasthan Yuvak Mandal')
  const [login,setLogin]=useState({username:'',password:''});const [loginError,setLoginError]=useState('');const [dayReportDate,setDayReportDate]=useState(new Date().toISOString().slice(0,10))
- const [active,setActive]=useState('dashboard');const [routes,setRoutes]=useState<RouteRow[]>([]);const [donors,setDonors]=useState<Donor[]>([]);const [members,setMembers]=useState<Member[]>([]);const [receipts,setReceipts]=useState<Receipt[]>([]);const [users,setUsers]=useState<AppUser[]>([]);const [receiptAudits,setReceiptAudits]=useState<ReceiptAudit[]>([]);const [driveConnected,setDriveConnected]=useState(false);const [driveBusy,setDriveBusy]=useState(false)
+ const [active,setActive]=useState('dashboard');const [routes,setRoutes]=useState<RouteRow[]>([]);const [donors,setDonors]=useState<Donor[]>([]);const [members,setMembers]=useState<Member[]>([]);const [receipts,setReceipts]=useState<Receipt[]>([]);const [users,setUsers]=useState<AppUser[]>([]);const [receiptAudits,setReceiptAudits]=useState<ReceiptAudit[]>([]);const [driveConnected,setDriveConnected]=useState(false);const [driveBusy,setDriveBusy]=useState(false);const [bulkDriveUpload,setBulkDriveUpload]=useState({running:false,total:0,done:0,uploaded:0,skipped:0,failed:0,current:''})
  const [selectedRoute,setSelectedRoute]=useState('');const [pendingRoute,setPendingRoute]=useState('');const [q,setQ]=useState('');const [modal,setModal]=useState<string|null>(null);const [editReceipt,setEditReceipt]=useState<Receipt|null>(null);const [editReceiptForm,setEditReceiptForm]=useState({receiptNo:'',donorName:'',mobile:'',pan:'',date:'',amount:'',mode:'Cash',chequeNo:'',bankName:'',areaName:'',is80g:false,reason:''});const [selectedDonorIds,setSelectedDonorIds]=useState<string[]>([]);const [collectRouteEdit,setCollectRouteEdit]=useState(false);const [editingUser,setEditingUser]=useState<AppUser|null>(null);const [selected,setSelected]=useState<Donor|null>(null);const [viewReceipt,setViewReceipt]=useState<Receipt|null>(null);const [preparedReceiptFile,setPreparedReceiptFile]=useState<File|null>(null);const [receiptSharePreparing,setReceiptSharePreparing]=useState(false);const [preview,setPreview]=useState<ImportPreview|null>(null);const fileRef=useRef<HTMLInputElement>(null)
  const [form,setForm]=useState({name:'',contactPerson:'',mobile:'',reference:'',routeId:'',expected:'',lastYear:'',lastReceipt:'',amount:'',receiptNumber:'',collectionDate:new Date().toISOString().slice(0,10),mode:'Cash',pan:'',is80g:false,chequeNo:'',bankName:'',memberName:'',memberMobile:'',birthDate:'',newRoute:'',userName:'',userMobile:'',username:'',password:'',role:'Volunteer' as Role,userActive:true})
  const isAdmin=profile&&['Super Admin','Admin'].includes(profile.role);const isSuperAdmin=profile?.role==='Super Admin';const canDownloadReports=!!profile&&['Super Admin','Admin','Treasurer'].includes(profile.role)
@@ -143,7 +143,7 @@ export default function Home(){
   }catch(e:any){alert(e?.message||'Could not connect Google Drive.')}finally{setDriveBusy(false)}
  }
  async function createReceiptPdf(receipt:Receipt):Promise<File|null>{
-  const imageFile=preparedReceiptFile||await createReceiptImage(receipt);if(!imageFile)return null
+  const imageFile=await createReceiptImage(receipt);if(!imageFile)return null
   const dataUrl=await new Promise<string>((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(String(fr.result||''));fr.onerror=()=>reject(fr.error);fr.readAsDataURL(imageFile)})
   const {jsPDF}=await import('jspdf')
   const pdf=new jsPDF({orientation:'landscape',unit:'px',format:[1536,1024],hotfixes:['px_scaling']})
@@ -165,6 +165,33 @@ export default function Home(){
    setReceipts(rows=>rows.map(x=>x.id===receipt.id?updated:x));setViewReceipt(v=>v?.id===receipt.id?updated:v)
    return updated
   }catch(e:any){if(!quiet)alert(e?.message||'Could not upload receipt to Google Drive.');return receipt}
+ }
+
+ async function bulkUploadExistingReceipts(){
+  if(!supabase||!isAdmin)return
+  if(!driveConnected)return alert('Connect Google Drive first.')
+  if(bulkDriveUpload.running)return
+  const already=receipts.filter(r=>!!r.googleDriveUrl).length
+  const pending=receipts.filter(r=>!r.googleDriveUrl)
+  if(!pending.length)return alert(`All ${receipts.length} receipt(s) are already available in Google Drive.`)
+  if(!window.confirm(`Upload ${pending.length} existing receipt PDF(s) to Google Drive?\n\n${already} receipt(s) already uploaded will be skipped.\n\nKeep this page open until the process completes.`))return
+
+  let uploaded=0,failed=0
+  setBulkDriveUpload({running:true,total:pending.length,done:0,uploaded:0,skipped:already,failed:0,current:''})
+  for(let i=0;i<pending.length;i++){
+   const receipt=pending[i]
+   setBulkDriveUpload(v=>({...v,current:`Receipt ${receipt.receiptNo} — ${receipt.donorName}`,done:i}))
+   try{
+    const result=await uploadReceiptToDrive(receipt,true)
+    if(result.googleDriveUrl)uploaded++;else failed++
+   }catch{failed++}
+   setBulkDriveUpload(v=>({...v,done:i+1,uploaded,failed}))
+   // Small pause keeps long browser jobs responsive and avoids burst uploads.
+   await new Promise(resolve=>setTimeout(resolve,120))
+  }
+  setBulkDriveUpload(v=>({...v,running:false,current:'Completed',done:pending.length,uploaded,failed}))
+  await loadAll()
+  alert(`Google Drive receipt upload completed.\n\nUploaded: ${uploaded}\nAlready uploaded / skipped: ${already}\nFailed: ${failed}${failed?'\n\nYou can run the upload again to retry failed receipts.':''}`)
  }
 
  function whatsappUrl(receipt:Receipt){
@@ -348,7 +375,26 @@ export default function Home(){
  {active==='receipts'&&<ReceiptCentre receipts={receipts} only80g={false} onView={r=>{setViewReceipt(r);setModal('receipt')}} onEdit={openEditReceipt}/>}{active==='80g'&&<ReceiptCentre receipts={receipts} only80g onView={r=>{setViewReceipt(r);setModal('receipt')}} onEdit={openEditReceipt}/>}
  {active==='members'&&<section className="card donorCard"><div className="tableHead"><b>{L.members}</b>{isAdmin&&<div className="actions"><button className="ghost" onClick={()=>{resetForm();setModal('member')}}>+ {L.addMember}</button><button className="ghost" onClick={()=>{setPreview(null);setModal('importMembers')}}>⇧ {L.bulkMembers}</button></div>}</div><div className="tableWrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>{L.birthDate}</th></tr></thead><tbody>{members.map(m=><tr key={m.id}><td><b>{m.name}</b></td><td>{m.mobile}</td><td>{m.birthDate||'—'}</td></tr>)}</tbody></table></div></section>}
  {active==='reports'&&<Reports donors={donors} receipts={receipts} canDownload={canDownloadReports}/>} {active==='paymentPending'&&<PendingPayments receipts={receipts} onSettle={settlePendingReceipt}/>} {active==='daywise'&&<DaywiseReport receipts={receipts} date={dayReportDate} setDate={setDayReportDate}/>} 
- {active==='admin'&&isAdmin&&<><section className="card donorCard"><div className="tableHead"><b>{L.userManagement}</b><button className="primary" onClick={()=>{resetForm();setModal('user')}}>+ {L.addUser}</button></div><div className="tableWrap"><table><thead><tr><th>{L.loginName}</th><th>Name</th><th>Mobile</th><th>{L.role}</th><th>{L.active}</th>{isSuperAdmin&&<th>Action</th>}</tr></thead><tbody>{users.map(u=><tr key={u.userId}><td><b>{u.loginName}</b></td><td>{u.name}</td><td>{u.mobile||'—'}</td><td>{u.role}</td><td>{u.active?'Yes':'No'}</td>{isSuperAdmin&&<td><button className="smallBtn" onClick={()=>openEditUser(u)}>✎ {L.editUser}</button></td>}</tr>)}</tbody></table></div></section><section className="card driveIntegrationCard"><div className="tableHead"><div><b>Google Drive Receipts</b><small>{driveConnected?'Connected — receipt PDFs can be uploaded automatically.':'Not connected — connect the Mandal Google Drive account.'}</small></div><button className={driveConnected?'smallBtn':'primary'} disabled={driveBusy} onClick={connectGoogleDrive}>{driveBusy?'Connecting...':driveConnected?'Reconnect Google Drive':'Connect Google Drive'}</button></div></section><section className="card"><div className="tableHead"><b>Routes</b><button className="ghost" onClick={()=>{resetForm();setModal('route')}}>+ {L.addRoute}</button></div><div className="routeManager">{routes.map(r=>{const count=donors.filter(d=>d.routeId===r.id).length;return <div className="routeManageRow" key={r.id}><div><b>{r.name}</b><small>{count} {lang==='mr'?'देणगीदार':'donors'}</small></div><div className="rowActions"><button className="smallBtn" onClick={()=>renameRoute(r)}>✎ {L.editRoute}</button><button className="smallBtn dangerBtn" onClick={()=>deleteRoute(r)} disabled={count>0} title={count>0?L.routeInUse:''}>🗑 {L.deleteRoute}</button></div></div>})}</div></section><section className="card auditCard"><div className="tableHead"><div><b>{L.receiptAudit}</b><small>{receiptAudits.length} recorded edit(s)</small></div></div><div className="tableWrap"><table><thead><tr><th>Receipt</th><th>Edited By</th><th>Date / Time</th><th>Changes</th><th>Reason</th></tr></thead><tbody>{receiptAudits.map(a=><tr key={a.id}><td><b>{a.receiptNo}</b></td><td>{a.editedBy}</td><td>{a.editedAt}</td><td><div className="auditChanges">{Object.entries(a.changes||{}).map(([field,v]:any)=><span key={field}><b>{field.replaceAll('_',' ')}</b>: {String(v?.from??'—')} → {String(v?.to??'—')}</span>)}</div></td><td>{a.reason||'—'}</td></tr>)}</tbody></table>{!receiptAudits.length&&<div className="empty">No receipt edits have been recorded.</div>}</div></section></>}
+ {active==='admin'&&isAdmin&&<><section className="card donorCard"><div className="tableHead"><b>{L.userManagement}</b><button className="primary" onClick={()=>{resetForm();setModal('user')}}>+ {L.addUser}</button></div><div className="tableWrap"><table><thead><tr><th>{L.loginName}</th><th>Name</th><th>Mobile</th><th>{L.role}</th><th>{L.active}</th>{isSuperAdmin&&<th>Action</th>}</tr></thead><tbody>{users.map(u=><tr key={u.userId}><td><b>{u.loginName}</b></td><td>{u.name}</td><td>{u.mobile||'—'}</td><td>{u.role}</td><td>{u.active?'Yes':'No'}</td>{isSuperAdmin&&<td><button className="smallBtn" onClick={()=>openEditUser(u)}>✎ {L.editUser}</button></td>}</tr>)}</tbody></table></div></section><section className="card driveIntegrationCard">
+ <div className="tableHead">
+  <div><b>Google Drive Receipts</b><small>{driveConnected?'Connected — receipt PDFs can be uploaded automatically.':'Not connected — connect the Mandal Google Drive account.'}</small></div>
+  <div className="rowActions">
+   <button className={driveConnected?'smallBtn':'primary'} disabled={driveBusy||bulkDriveUpload.running} onClick={connectGoogleDrive}>{driveBusy?'Connecting...':driveConnected?'Reconnect Google Drive':'Connect Google Drive'}</button>
+   {driveConnected&&<button className="primary" disabled={bulkDriveUpload.running||!receipts.length} onClick={bulkUploadExistingReceipts}>{bulkDriveUpload.running?'Uploading Existing Receipts…':'Upload All Existing Receipts'}</button>}
+  </div>
+ </div>
+ {driveConnected&&<div className="driveSummary">
+  <span><b>{receipts.filter(r=>!!r.googleDriveUrl).length}</b> in Drive</span>
+  <span><b>{receipts.filter(r=>!r.googleDriveUrl).length}</b> waiting</span>
+  <span><b>{receipts.length}</b> total receipts</span>
+ </div>}
+ {bulkDriveUpload.running&&<div className="driveBulkProgress">
+  <div className="driveProgressHead"><b>{bulkDriveUpload.done} / {bulkDriveUpload.total}</b><span>{bulkDriveUpload.current}</span></div>
+  <div className="driveProgressTrack"><span style={{width:`${bulkDriveUpload.total?Math.round(bulkDriveUpload.done/bulkDriveUpload.total*100):0}%`}}/></div>
+  <small>Uploaded: {bulkDriveUpload.uploaded} · Failed: {bulkDriveUpload.failed} · Previously uploaded: {bulkDriveUpload.skipped}</small>
+ </div>}
+ {!bulkDriveUpload.running&&bulkDriveUpload.total>0&&<div className="driveBulkResult"><small>Last run — Uploaded: <b>{bulkDriveUpload.uploaded}</b> · Failed: <b>{bulkDriveUpload.failed}</b> · Skipped/already in Drive: <b>{bulkDriveUpload.skipped}</b></small></div>}
+</section><section className="card"><div className="tableHead"><b>Routes</b><button className="ghost" onClick={()=>{resetForm();setModal('route')}}>+ {L.addRoute}</button></div><div className="routeManager">{routes.map(r=>{const count=donors.filter(d=>d.routeId===r.id).length;return <div className="routeManageRow" key={r.id}><div><b>{r.name}</b><small>{count} {lang==='mr'?'देणगीदार':'donors'}</small></div><div className="rowActions"><button className="smallBtn" onClick={()=>renameRoute(r)}>✎ {L.editRoute}</button><button className="smallBtn dangerBtn" onClick={()=>deleteRoute(r)} disabled={count>0} title={count>0?L.routeInUse:''}>🗑 {L.deleteRoute}</button></div></div>})}</div></section><section className="card auditCard"><div className="tableHead"><div><b>{L.receiptAudit}</b><small>{receiptAudits.length} recorded edit(s)</small></div></div><div className="tableWrap"><table><thead><tr><th>Receipt</th><th>Edited By</th><th>Date / Time</th><th>Changes</th><th>Reason</th></tr></thead><tbody>{receiptAudits.map(a=><tr key={a.id}><td><b>{a.receiptNo}</b></td><td>{a.editedBy}</td><td>{a.editedAt}</td><td><div className="auditChanges">{Object.entries(a.changes||{}).map(([field,v]:any)=><span key={field}><b>{field.replaceAll('_',' ')}</b>: {String(v?.from??'—')} → {String(v?.to??'—')}</span>)}</div></td><td>{a.reason||'—'}</td></tr>)}</tbody></table>{!receiptAudits.length&&<div className="empty">No receipt edits have been recorded.</div>}</div></section></>}
  </main>
  {modal&&<div className="overlay"><div className={`modal ${modal==='receipt'?'receiptModal':''} ${(modal==='importDonors'||modal==='importMembers')?'wideModal':''}`}><div className="modalHead"><div><small>RYM_VARGANI · Live Database</small><h3>{modal==='donor'?L.addDonor:modal==='member'?L.addMember:modal==='collect'?`${L.collect} — ${selected?.name}`:modal==='receipt'?L.receipt:modal==='editReceipt'?L.editReceipt:modal==='user'?L.addUser:modal==='editUser'?L.editUser:modal==='route'?L.addRoute:modal==='importDonors'?L.bulkDonors:L.bulkMembers}</h3></div><button onClick={()=>{setModal(null);setPreview(null);setEditingUser(null)}}>×</button></div>
  {modal==='donor'&&<div className="formGrid"><Field label={`${L.name} *`}><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></Field><Field label={L.contact}><input value={form.contactPerson} onChange={e=>setForm({...form,contactPerson:e.target.value})}/></Field><Field label={L.mobile}><input value={form.mobile} onChange={e=>setForm({...form,mobile:e.target.value})}/></Field><Field label={`${L.pan} (${L.optional})`}><input value={form.pan} onChange={e=>setForm({...form,pan:e.target.value.toUpperCase()})} placeholder="ABCDE1234F"/></Field><Field label={`${L.reference} (${L.optional})`}><input value={form.reference} onChange={e=>setForm({...form,reference:e.target.value})} placeholder="Member / reference name"/></Field><Field label={L.route}><select value={form.routeId} onChange={e=>setForm({...form,routeId:e.target.value})}><option value="">—</option>{routes.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select></Field><Field label="Current Expected Amount"><input type="number" value={form.expected} onChange={e=>setForm({...form,expected:e.target.value})}/></Field><Field label={L.lastDonation}><input type="number" value={form.lastYear} onChange={e=>setForm({...form,lastYear:e.target.value})}/></Field><Field label={L.lastReceipt}><input value={form.lastReceipt} onChange={e=>setForm({...form,lastReceipt:e.target.value})}/></Field></div>}
@@ -370,12 +416,19 @@ function PaymentPendingStatus({receiptNo,mobile=false}:{receiptNo:string,mobile?
 function Field({label,children}:{label:string,children:React.ReactNode}){return <label className="field"><span>{label}</span>{children}</label>}
 function ReceiptCentre({receipts,only80g,onView,onEdit}:{receipts:Receipt[],only80g:boolean,onView:(r:Receipt)=>void,onEdit:(r:Receipt)=>void}){
  const [receiptSearch,setReceiptSearch]=useState('')
- const query=receiptSearch.trim().toLowerCase()
- const rows=receipts
-  .filter(r=>only80g?r.type==='80G':true)
-  .filter(r=>!query||`${r.receiptNo} ${r.donorName} ${r.mobile} ${r.date} ${r.mode} ${r.collector}`.toLowerCase().includes(query))
-  .sort((a,b)=>b.receiptNo.localeCompare(a.receiptNo,undefined,{numeric:true,sensitivity:'base'}))
- return <section className="card donorCard"><div className="tableHead receiptTableHead"><div><b>{only80g?'80G Receipts':'Receipt Centre'}</b><small>{rows.length} receipt(s) · {money(rows.reduce((s,r)=>s+r.amount,0))} · Receipt No. high to low</small></div><input className="search receiptSearch" placeholder="Search receipt no., donor, mobile, date or mode" value={receiptSearch} onChange={e=>setReceiptSearch(e.target.value)}/></div><div className="tableWrap"><table><thead><tr><th>Receipt No.</th><th>Donor</th><th>Date</th><th>Type</th><th>Mode</th><th>Collector</th><th>Amount</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><b>{r.receiptNo}</b></td><td>{r.donorName}<small>{r.mobile}</small></td><td>{r.date}</td><td>{r.type}</td><td>{r.mode}</td><td>{r.collector}</td><td><b>{money(r.amount)}</b></td><td><div className="rowActions"><button className="smallBtn" onClick={()=>onView(r)}>View / Print</button><button className="smallBtn" onClick={()=>onEdit(r)}>✎ Edit Receipt</button></div></td></tr>)}</tbody></table>{!rows.length&&<div className="empty">{query?'No matching receipts.':'No receipts yet.'}</div>}</div></section>}
+ const normalize=(v:any)=>String(v??'').trim().toLowerCase().replace(/\s+/g,' ')
+ const digits=(v:any)=>String(v??'').replace(/\D/g,'')
+ const query=normalize(receiptSearch),queryDigits=digits(receiptSearch)
+ const matches=(r:Receipt)=>{
+  if(!query)return true
+  const dateDash=normalize(r.date),dateSlash=dateDash.replaceAll('-','/')
+  const text=[r.receiptNo,r.donorName,r.mobile,dateDash,dateSlash,r.mode,r.collector,r.pan,r.areaName,r.type,r.amount].map(normalize).join(' ')
+  if(text.includes(query))return true
+  if(queryDigits&&(digits(r.receiptNo).includes(queryDigits)||digits(r.mobile).includes(queryDigits)))return true
+  return query.split(' ').filter(Boolean).every(token=>text.includes(token))
+ }
+ const rows=receipts.filter(r=>only80g?r.type==='80G':true).filter(matches).slice().sort((a,b)=>String(b.receiptNo||'').localeCompare(String(a.receiptNo||''),undefined,{numeric:true,sensitivity:'base'}))
+ return <section className="card donorCard"><div className="tableHead receiptTableHead"><div><b>{only80g?'80G Receipts':'Receipt Centre'}</b><small>{rows.length} receipt(s) · {money(rows.reduce((sum,r)=>sum+r.amount,0))} · Receipt No. high to low</small></div><div className="receiptSearchWrap"><input type="search" autoComplete="off" className="search receiptSearch" placeholder="Search receipt no., donor, mobile, date, mode..." value={receiptSearch} onChange={e=>setReceiptSearch(e.target.value)}/>{receiptSearch&&<button type="button" className="smallBtn receiptSearchClear" onClick={()=>setReceiptSearch('')}>Clear</button>}</div></div><div className="tableWrap"><table><thead><tr><th>Receipt No.</th><th>Donor</th><th>Date</th><th>Type</th><th>Mode</th><th>Collector</th><th>Amount</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><b>{r.receiptNo}</b></td><td>{r.donorName}<small>{r.mobile}</small></td><td>{r.date}</td><td>{r.type}</td><td>{r.mode}</td><td>{r.collector}</td><td><b>{money(r.amount)}</b></td><td><div className="rowActions"><button className="smallBtn" onClick={()=>onView(r)}>View / Print</button><button className="smallBtn" onClick={()=>onEdit(r)}>✎ Edit Receipt</button></div></td></tr>)}</tbody></table>{!rows.length&&<div className="empty">{query?'No matching receipts.':'No receipts yet.'}</div>}</div></section>}
 function ReceiptDesign({receipt}:{receipt:Receipt}){const [dd='',mm='',yyyy='']=receipt.date.split('-');return <div className="receiptPrintArea"><div className="receiptCanvas"><img src="/rym-receipt-template.jpeg" alt="Donation receipt"/><div className="rv rvNo">{receipt.receiptNo}</div><div className="rv rvDate">{dd} / {mm} / {yyyy}</div><div className="rv rvName">{receipt.donorName}</div>{receipt.mobile&&<div className="rv rvMobile">{receipt.mobile}</div>}{receipt.pan&&<div className="rv rvPan">{receipt.pan}</div>}<div className="rv rvWords">{receipt.amountWords}</div><div className="rv rvAmount">₹ {new Intl.NumberFormat('en-IN').format(receipt.amount)}/-</div>{receipt.mode.toLowerCase()==='cheque'&&<><div className="rv rvCheque">{receipt.chequeNo}</div>{receipt.bankName&&<div className="rv rvBank">{receipt.bankName}</div>}</>}<div className="rv rvCollector">{receipt.collector}</div></div></div>}
 
 function DatewiseGraph({receipts}:{receipts:Receipt[]}){

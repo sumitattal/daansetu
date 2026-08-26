@@ -367,3 +367,23 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
 }
 
 .driveIntegrationCard small{display:block;margin-top:4px;color:#60706b}.driveReceiptLink{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+
+/* RYM_VARGANI V1.7.1 — bulk Google Drive receipt uploader */
+.driveSummary{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.driveSummary span{padding:9px 12px;border:1px solid #dfe7e3;border-radius:10px;background:#f8fbf9}
+.driveBulkProgress,.driveBulkResult{margin-top:14px;padding:12px;border-radius:12px;background:#f7faf8;border:1px solid #dfe7e3}
+.driveProgressHead{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:8px}
+.driveProgressHead span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.driveProgressTrack{height:10px;border-radius:999px;background:#e4ebe7;overflow:hidden;margin-bottom:8px}
+.driveProgressTrack span{display:block;height:100%;background:#1f7557;transition:width .2s ease}
+.receiptSearchWrap{display:flex;gap:8px;align-items:center;min-width:min(100%,430px)}
+.receiptSearchWrap .receiptSearch{flex:1;min-width:0}
+.receiptSearchClear{white-space:nowrap}
+@media(max-width:700px){
+ .driveIntegrationCard .tableHead,.driveProgressHead{align-items:stretch;flex-direction:column}
+ .driveIntegrationCard .rowActions{width:100%}
+ .driveIntegrationCard .rowActions button{flex:1}
+ .receiptTableHead{align-items:stretch!important}
+ .receiptSearchWrap{width:100%;min-width:0}
+ .receiptSearchWrap .receiptSearch{width:100%;font-size:16px}
+}

@@ -365,3 +365,5 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
 @media(max-width:700px){
   .receiptCanvas .rvDate{font-size:16px!important}
 }
+
+.driveIntegrationCard small{display:block;margin-top:4px;color:#60706b}.driveReceiptLink{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}

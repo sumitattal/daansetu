@@ -9,7 +9,7 @@ type RouteRow={id:string;name:string}
 type Donor={id:string;name:string;contactPerson:string;mobile:string;pan:string;reference:string;routeId:string;route:string;expected:number;received:number;lastYear:number;lastYearReceipt:string;status:'Pending'|'Partial'|'Collected'}
 type Member={id:string;name:string;mobile:string;birthDate:string}
 type AppUser={userId:string;loginName:string;name:string;mobile:string;role:Role;active:boolean}
-type Receipt={id:string;paymentId:string;receiptNo:string;donorId:string;donorName:string;mobile:string;amount:number;amountWords:string;date:string;paymentReceivedDate:string;mode:string;paymentStatus:'paid'|'receipt_pending';type:'Normal'|'80G';pan:string;areaName:string;collector:string;chequeNo:string;bankName:string}
+type Receipt={id:string;paymentId:string;receiptNo:string;donorId:string;donorName:string;mobile:string;amount:number;amountWords:string;date:string;paymentReceivedDate:string;mode:string;paymentStatus:'paid'|'receipt_pending';type:'Normal'|'80G';pan:string;areaName:string;collector:string;chequeNo:string;bankName:string;googleDriveUrl:string;googleDriveFileId:string}
 type ReceiptAudit={id:string;receiptId:string;receiptNo:string;editedBy:string;editedAt:string;reason:string;changes:Record<string,{from:any;to:any}>}
 type ImportPreview={kind:'donors'|'members';valid:any[];invalid:{row:number;reason:string}[];fileName:string}
 
@@ -30,13 +30,14 @@ export default function Home(){
  const [lang,setLang]=useState<Lang>('en');const L=tr[lang]
  const [loading,setLoading]=useState(true);const [session,setSession]=useState<any>(null);const [profile,setProfile]=useState<AppUser|null>(null);const [orgId,setOrgId]=useState('');const [orgName,setOrgName]=useState('Rajasthan Yuvak Mandal')
  const [login,setLogin]=useState({username:'',password:''});const [loginError,setLoginError]=useState('');const [dayReportDate,setDayReportDate]=useState(new Date().toISOString().slice(0,10))
- const [active,setActive]=useState('dashboard');const [routes,setRoutes]=useState<RouteRow[]>([]);const [donors,setDonors]=useState<Donor[]>([]);const [members,setMembers]=useState<Member[]>([]);const [receipts,setReceipts]=useState<Receipt[]>([]);const [users,setUsers]=useState<AppUser[]>([]);const [receiptAudits,setReceiptAudits]=useState<ReceiptAudit[]>([])
+ const [active,setActive]=useState('dashboard');const [routes,setRoutes]=useState<RouteRow[]>([]);const [donors,setDonors]=useState<Donor[]>([]);const [members,setMembers]=useState<Member[]>([]);const [receipts,setReceipts]=useState<Receipt[]>([]);const [users,setUsers]=useState<AppUser[]>([]);const [receiptAudits,setReceiptAudits]=useState<ReceiptAudit[]>([]);const [driveConnected,setDriveConnected]=useState(false);const [driveBusy,setDriveBusy]=useState(false)
  const [selectedRoute,setSelectedRoute]=useState('');const [pendingRoute,setPendingRoute]=useState('');const [q,setQ]=useState('');const [modal,setModal]=useState<string|null>(null);const [editReceipt,setEditReceipt]=useState<Receipt|null>(null);const [editReceiptForm,setEditReceiptForm]=useState({receiptNo:'',donorName:'',mobile:'',pan:'',date:'',amount:'',mode:'Cash',chequeNo:'',bankName:'',areaName:'',is80g:false,reason:''});const [selectedDonorIds,setSelectedDonorIds]=useState<string[]>([]);const [collectRouteEdit,setCollectRouteEdit]=useState(false);const [editingUser,setEditingUser]=useState<AppUser|null>(null);const [selected,setSelected]=useState<Donor|null>(null);const [viewReceipt,setViewReceipt]=useState<Receipt|null>(null);const [preparedReceiptFile,setPreparedReceiptFile]=useState<File|null>(null);const [receiptSharePreparing,setReceiptSharePreparing]=useState(false);const [preview,setPreview]=useState<ImportPreview|null>(null);const fileRef=useRef<HTMLInputElement>(null)
  const [form,setForm]=useState({name:'',contactPerson:'',mobile:'',reference:'',routeId:'',expected:'',lastYear:'',lastReceipt:'',amount:'',receiptNumber:'',collectionDate:new Date().toISOString().slice(0,10),mode:'Cash',pan:'',is80g:false,chequeNo:'',bankName:'',memberName:'',memberMobile:'',birthDate:'',newRoute:'',userName:'',userMobile:'',username:'',password:'',role:'Volunteer' as Role,userActive:true})
  const isAdmin=profile&&['Super Admin','Admin'].includes(profile.role);const isSuperAdmin=profile?.role==='Super Admin';const canDownloadReports=!!profile&&['Super Admin','Admin','Treasurer'].includes(profile.role)
 
  useEffect(()=>{if(!supabase){setLoading(false);return}supabase.auth.getSession().then(({data})=>{setSession(data.session);if(data.session)loadAll(data.session.user.id);else setLoading(false)});const {data:sub}=supabase.auth.onAuthStateChange((_e,s)=>{setSession(s);if(!s){setProfile(null);setLoading(false)}});return()=>sub.subscription.unsubscribe()},[])
 
+ useEffect(()=>{if(!session)return;loadDriveStatus();const p=new URLSearchParams(window.location.search);if(p.get('google_drive')==='connected'){setDriveConnected(true);window.history.replaceState({},'',window.location.pathname);alert('Google Drive connected successfully.')}else if(p.get('google_drive')==='error'){const msg=p.get('message')||'Google Drive connection failed.';window.history.replaceState({},'',window.location.pathname);alert(msg)}},[session])
  useEffect(()=>{let cancelled=false;if(modal!=='receipt'||!viewReceipt){setPreparedReceiptFile(null);setReceiptSharePreparing(false);return}setPreparedReceiptFile(null);setReceiptSharePreparing(true);createReceiptImage(viewReceipt).then(file=>{if(!cancelled)setPreparedReceiptFile(file)}).catch(()=>{if(!cancelled)setPreparedReceiptFile(null)}).finally(()=>{if(!cancelled)setReceiptSharePreparing(false)});return()=>{cancelled=true}},[modal,viewReceipt])
 
  async function loadAll(userId?:string){
@@ -59,7 +60,7 @@ export default function Home(){
    const paid=new Map<string,number>();for(const x of paymentR.data||[])if((x.payment_status||'paid')==='paid')paid.set(x.donor_id,(paid.get(x.donor_id)||0)+Number(x.amount))
    setDonors((donorR.data||[]).map((d:any)=>{const received=paid.get(d.id)||0,expected=Number(d.current_expected_amount||0);return{id:d.id,name:d.name,contactPerson:d.contact_person||'',mobile:d.mobile||'',pan:d.pan||'',reference:d.reference||'',routeId:d.route_id||'',route:d.routes?.name||'',expected,received,lastYear:Number(d.last_year_donation||0),lastYearReceipt:d.last_year_receipt_number||'',status:received<=0?'Pending':received>=expected&&expected>0?'Collected':'Partial'}}))
    setMembers((peopleR.data||[]).map((m:any)=>({id:m.id,name:m.name,mobile:m.mobile,birthDate:m.birth_date||''})))
-   setReceipts((receiptR.data||[]).map((r:any)=>{const pay=(paymentR.data||[]).find((p:any)=>p.id===r.payment_id);return {id:r.id,paymentId:r.payment_id,receiptNo:r.receipt_number,donorId:pay?.donor_id||'',donorName:r.donor_name_snapshot,mobile:r.donor_mobile_snapshot||'',amount:Number(pay?.amount||0),amountWords:r.amount_words_snapshot,date:pay?.payment_date?new Date(pay.payment_date+'T00:00:00').toLocaleDateString('en-GB').replaceAll('/','-'):new Date(r.issued_at).toLocaleDateString('en-GB').replaceAll('/','-'),paymentReceivedDate:pay?.payment_received_date?new Date(pay.payment_received_date+'T00:00:00').toLocaleDateString('en-GB').replaceAll('/','-'):'',mode:(pay?.payment_status==='receipt_pending'?'Receipt Given - Payment Pending':pay?.mode?String(pay.mode).replace(/^./,c=>c.toUpperCase()):r.payment_mode_snapshot),paymentStatus:(pay?.payment_status||'paid') as 'paid'|'receipt_pending',type:r.receipt_type==='80g'?'80G':'Normal',pan:r.donor_pan_snapshot||'',areaName:r.area_name_snapshot||'',collector:r.collected_by_name_snapshot,chequeNo:r.cheque_number_snapshot||'',bankName:r.bank_name_snapshot||''}}))
+   setReceipts((receiptR.data||[]).map((r:any)=>{const pay=(paymentR.data||[]).find((p:any)=>p.id===r.payment_id);return {id:r.id,paymentId:r.payment_id,receiptNo:r.receipt_number,donorId:pay?.donor_id||'',donorName:r.donor_name_snapshot,mobile:r.donor_mobile_snapshot||'',amount:Number(pay?.amount||0),amountWords:r.amount_words_snapshot,date:pay?.payment_date?new Date(pay.payment_date+'T00:00:00').toLocaleDateString('en-GB').replaceAll('/','-'):new Date(r.issued_at).toLocaleDateString('en-GB').replaceAll('/','-'),paymentReceivedDate:pay?.payment_received_date?new Date(pay.payment_received_date+'T00:00:00').toLocaleDateString('en-GB').replaceAll('/','-'):'',mode:(pay?.payment_status==='receipt_pending'?'Receipt Given - Payment Pending':pay?.mode?String(pay.mode).replace(/^./,c=>c.toUpperCase()):r.payment_mode_snapshot),paymentStatus:(pay?.payment_status||'paid') as 'paid'|'receipt_pending',type:r.receipt_type==='80g'?'80G':'Normal',pan:r.donor_pan_snapshot||'',areaName:r.area_name_snapshot||'',collector:r.collected_by_name_snapshot,chequeNo:r.cheque_number_snapshot||'',bankName:r.bank_name_snapshot||'',googleDriveUrl:r.google_drive_url||'',googleDriveFileId:r.google_drive_file_id||''}}))
    setUsers((userR.data||[]).map((u:any)=>({userId:u.user_id,loginName:u.login_name,name:u.display_name,mobile:u.mobile||'',role:roleFromDb(u.role),active:u.active})))
    setReceiptAudits((auditR.data||[]).map((a:any)=>({id:a.id,receiptId:a.receipt_id,receiptNo:a.receipt_number_snapshot||'',editedBy:a.edited_by_name||'',editedAt:new Date(a.edited_at).toLocaleString('en-IN'),reason:a.reason||'',changes:a.changed_fields||{}})))
   }catch(e:any){setLoginError(e.message||'Could not load RYM_VARGANI data.')}finally{setLoading(false)}
@@ -98,9 +99,15 @@ export default function Home(){
   setModal(null);resetForm();await loadAll()
   const r=Array.isArray(data)?data[0]:data
   if(r){
-   const issuedReceipt:Receipt={id:r.id,paymentId:r.payment_id,receiptNo:r.receipt_number,donorId:selected.id,donorName:r.donor_name_snapshot,mobile:r.donor_mobile_snapshot||'',amount,amountWords:r.amount_words_snapshot,date:new Date(form.collectionDate+'T00:00:00').toLocaleDateString('en-GB').replaceAll('/','-'),paymentReceivedDate:isPaymentPending?'':new Date(form.collectionDate+'T00:00:00').toLocaleDateString('en-GB').replaceAll('/','-'),mode:r.payment_mode_snapshot,paymentStatus:isPaymentPending?'receipt_pending':'paid',type:r.receipt_type==='80g'?'80G':'Normal',pan:r.donor_pan_snapshot||'',areaName:r.area_name_snapshot||selected.route||'',collector:r.collected_by_name_snapshot,chequeNo:r.cheque_number_snapshot||'',bankName:r.bank_name_snapshot||''}
+   const issuedReceipt:Receipt={id:r.id,paymentId:r.payment_id,receiptNo:r.receipt_number,donorId:selected.id,donorName:r.donor_name_snapshot,mobile:r.donor_mobile_snapshot||'',amount,amountWords:r.amount_words_snapshot,date:new Date(form.collectionDate+'T00:00:00').toLocaleDateString('en-GB').replaceAll('/','-'),paymentReceivedDate:isPaymentPending?'':new Date(form.collectionDate+'T00:00:00').toLocaleDateString('en-GB').replaceAll('/','-'),mode:r.payment_mode_snapshot,paymentStatus:isPaymentPending?'receipt_pending':'paid',type:r.receipt_type==='80g'?'80G':'Normal',pan:r.donor_pan_snapshot||'',areaName:r.area_name_snapshot||selected.route||'',collector:r.collected_by_name_snapshot,chequeNo:r.cheque_number_snapshot||'',bankName:r.bank_name_snapshot||'',googleDriveUrl:'',googleDriveFileId:''}
    setViewReceipt(issuedReceipt);setModal('receipt')
-   if(sendAfterSave){const url=whatsappUrl(issuedReceipt);if(whatsappWindow&&!whatsappWindow.closed)whatsappWindow.location.href=url;else window.location.href=url}
+   if(sendAfterSave){
+    const uploaded=await uploadReceiptToDrive(issuedReceipt)
+    const url=uploaded.googleDriveUrl?whatsappUrl(uploaded):whatsappUrl(issuedReceipt)
+    if(whatsappWindow&&!whatsappWindow.closed)whatsappWindow.location.href=url;else window.location.href=url
+   }else{
+    uploadReceiptToDrive(issuedReceipt,true)
+   }
   }
  }
  async function settlePendingReceipt(receipt:Receipt){
@@ -116,36 +123,63 @@ export default function Home(){
   if(error)return alert(error.message)
   await loadAll();alert('Payment status updated successfully.')
  }
+
+ async function loadDriveStatus(){
+  if(!supabase||!session)return
+  try{
+   const {data:{session:sess}}=await supabase.auth.getSession();if(!sess)return
+   const r=await fetch('/api/google/status',{headers:{authorization:`Bearer ${sess.access_token}`}})
+   const j=await r.json();if(r.ok)setDriveConnected(!!j.connected)
+  }catch{}
+ }
+ async function connectGoogleDrive(){
+  if(!supabase||!isAdmin)return
+  setDriveBusy(true)
+  try{
+   const {data:{session:sess}}=await supabase.auth.getSession();if(!sess)return
+   const r=await fetch('/api/google/connect',{method:'POST',headers:{authorization:`Bearer ${sess.access_token}`}})
+   const j=await r.json();if(!r.ok)throw new Error(j.error||'Could not start Google Drive connection.')
+   window.location.href=j.url
+  }catch(e:any){alert(e?.message||'Could not connect Google Drive.')}finally{setDriveBusy(false)}
+ }
+ async function createReceiptPdf(receipt:Receipt):Promise<File|null>{
+  const imageFile=preparedReceiptFile||await createReceiptImage(receipt);if(!imageFile)return null
+  const dataUrl=await new Promise<string>((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(String(fr.result||''));fr.onerror=()=>reject(fr.error);fr.readAsDataURL(imageFile)})
+  const {jsPDF}=await import('jspdf')
+  const pdf=new jsPDF({orientation:'landscape',unit:'px',format:[1536,1024],hotfixes:['px_scaling']})
+  pdf.addImage(dataUrl,'PNG',0,0,1536,1024,undefined,'FAST')
+  const blob=pdf.output('blob')
+  const safeName=receipt.donorName.replace(/[^A-Za-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'')
+  return new File([blob],`RYM-Receipt-${receipt.receiptNo}-${safeName||'Donor'}.pdf`,{type:'application/pdf'})
+ }
+ async function uploadReceiptToDrive(receipt:Receipt,quiet=false):Promise<Receipt>{
+  if(receipt.googleDriveUrl)return receipt
+  if(!supabase)return receipt
+  try{
+   const {data:{session:sess}}=await supabase.auth.getSession();if(!sess)throw new Error('Please log in again.')
+   const pdf=await createReceiptPdf(receipt);if(!pdf)throw new Error('Could not prepare receipt PDF.')
+   const formData=new FormData();formData.append('receiptId',receipt.id);formData.append('filename',pdf.name);formData.append('file',pdf)
+   const r=await fetch('/api/google/upload-receipt',{method:'POST',headers:{authorization:`Bearer ${sess.access_token}`},body:formData})
+   const j=await r.json();if(!r.ok)throw new Error(j.error||'Google Drive upload failed.')
+   const updated={...receipt,googleDriveUrl:String(j.url||''),googleDriveFileId:String(j.fileId||'')}
+   setReceipts(rows=>rows.map(x=>x.id===receipt.id?updated:x));setViewReceipt(v=>v?.id===receipt.id?updated:v)
+   return updated
+  }catch(e:any){if(!quiet)alert(e?.message||'Could not upload receipt to Google Drive.');return receipt}
+ }
+
  function whatsappUrl(receipt:Receipt){
   const mobile=String(receipt.mobile||'').replace(/\D/g,'')
-  const indian=mobile.length===10?`91${mobile}`:mobile
-  const msg=encodeURIComponent(`Namaskar ${receipt.donorName}, your RYM_VARGANI donation receipt ${receipt.receiptNo} for ₹${receipt.amount} is ready. Thank you.`)
+  const indian=mobile.length===10?`91${mobile}`:mobile.startsWith('0')&&mobile.length===11?`91${mobile.slice(1)}`:mobile
+  const link=receipt.googleDriveUrl?`\n\nReceipt PDF: ${receipt.googleDriveUrl}`:''
+  const msg=encodeURIComponent(`Namaskar ${receipt.donorName},\n\nThank you for your donation to Rajasthan Yuvak Mandal, Sangamner.\n\nReceipt No.: ${receipt.receiptNo}\nAmount: ₹${receipt.amount.toLocaleString('en-IN')}/-\nReceipt Date: ${receipt.date.split('-').reverse().join('/')}${link}\n\nधन्यवाद!\nRajasthan Yuvak Mandal, Sangamner`)
   return `https://wa.me/${indian}?text=${msg}`
  }
  async function shareReceipt(receipt:Receipt){
   const mobile=String(receipt.mobile||'').replace(/\D/g,'')
   if(!mobile)return alert('Donor mobile number is not available on this receipt.')
-  const normalized=mobile.length===10?`91${mobile}`:mobile.startsWith('0')&&mobile.length===11?`91${mobile.slice(1)}`:mobile
-  const message=`Namaskar ${receipt.donorName},\n\nThank you for your donation to Rajasthan Yuvak Mandal, Sangamner.\n\nReceipt No.: ${receipt.receiptNo}\nAmount: ₹${receipt.amount.toLocaleString('en-IN')}/-\nReceipt Date: ${receipt.date.split('-').reverse().join('/')}\n\nPlease find your receipt attached.\n\nधन्यवाद!\nRajasthan Yuvak Mandal, Sangamner`
-
-  // Personal WhatsApp cannot accept a programmatically attached PDF for a
-  // specific contact. Prepare/download the receipt first, then open that
-  // donor's exact WhatsApp chat so the user can attach the downloaded file.
-  try{
-   const file=preparedReceiptFile||await createReceiptImage(receipt)
-   if(!file)return alert('Could not prepare the receipt file.')
-   const pngUrl=URL.createObjectURL(file)
-   const a=document.createElement('a');a.href=pngUrl;a.download=file.name;document.body.appendChild(a);a.click();a.remove()
-   setTimeout(()=>URL.revokeObjectURL(pngUrl),5000)
-
-   // Also create a print-ready PDF through the browser's existing receipt
-   // print flow when the user needs PDF. Mobile browsers save this as PDF via
-   // Print/Save PDF; WhatsApp attachment selection remains a user action.
-   const url=`https://wa.me/${normalized}?text=${encodeURIComponent(message)}`
-   setTimeout(()=>{window.location.href=url},350)
-  }catch(e:any){
-   alert(e?.message||'Unable to prepare receipt for WhatsApp.')
-  }
+  const uploaded=await uploadReceiptToDrive(receipt)
+  if(!uploaded.googleDriveUrl)return
+  window.location.href=whatsappUrl(uploaded)
  }
  async function createReceiptImage(receipt:Receipt):Promise<File|null>{
   const img=new Image();img.crossOrigin='anonymous';img.src='/rym-receipt-template.jpeg';await new Promise((res,rej)=>{img.onload=()=>res(null);img.onerror=rej})
@@ -314,7 +348,7 @@ export default function Home(){
  {active==='receipts'&&<ReceiptCentre receipts={receipts} only80g={false} onView={r=>{setViewReceipt(r);setModal('receipt')}} onEdit={openEditReceipt}/>}{active==='80g'&&<ReceiptCentre receipts={receipts} only80g onView={r=>{setViewReceipt(r);setModal('receipt')}} onEdit={openEditReceipt}/>}
  {active==='members'&&<section className="card donorCard"><div className="tableHead"><b>{L.members}</b>{isAdmin&&<div className="actions"><button className="ghost" onClick={()=>{resetForm();setModal('member')}}>+ {L.addMember}</button><button className="ghost" onClick={()=>{setPreview(null);setModal('importMembers')}}>⇧ {L.bulkMembers}</button></div>}</div><div className="tableWrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>{L.birthDate}</th></tr></thead><tbody>{members.map(m=><tr key={m.id}><td><b>{m.name}</b></td><td>{m.mobile}</td><td>{m.birthDate||'—'}</td></tr>)}</tbody></table></div></section>}
  {active==='reports'&&<Reports donors={donors} receipts={receipts} canDownload={canDownloadReports}/>} {active==='paymentPending'&&<PendingPayments receipts={receipts} onSettle={settlePendingReceipt}/>} {active==='daywise'&&<DaywiseReport receipts={receipts} date={dayReportDate} setDate={setDayReportDate}/>} 
- {active==='admin'&&isAdmin&&<><section className="card donorCard"><div className="tableHead"><b>{L.userManagement}</b><button className="primary" onClick={()=>{resetForm();setModal('user')}}>+ {L.addUser}</button></div><div className="tableWrap"><table><thead><tr><th>{L.loginName}</th><th>Name</th><th>Mobile</th><th>{L.role}</th><th>{L.active}</th>{isSuperAdmin&&<th>Action</th>}</tr></thead><tbody>{users.map(u=><tr key={u.userId}><td><b>{u.loginName}</b></td><td>{u.name}</td><td>{u.mobile||'—'}</td><td>{u.role}</td><td>{u.active?'Yes':'No'}</td>{isSuperAdmin&&<td><button className="smallBtn" onClick={()=>openEditUser(u)}>✎ {L.editUser}</button></td>}</tr>)}</tbody></table></div></section><section className="card"><div className="tableHead"><b>Routes</b><button className="ghost" onClick={()=>{resetForm();setModal('route')}}>+ {L.addRoute}</button></div><div className="routeManager">{routes.map(r=>{const count=donors.filter(d=>d.routeId===r.id).length;return <div className="routeManageRow" key={r.id}><div><b>{r.name}</b><small>{count} {lang==='mr'?'देणगीदार':'donors'}</small></div><div className="rowActions"><button className="smallBtn" onClick={()=>renameRoute(r)}>✎ {L.editRoute}</button><button className="smallBtn dangerBtn" onClick={()=>deleteRoute(r)} disabled={count>0} title={count>0?L.routeInUse:''}>🗑 {L.deleteRoute}</button></div></div>})}</div></section><section className="card auditCard"><div className="tableHead"><div><b>{L.receiptAudit}</b><small>{receiptAudits.length} recorded edit(s)</small></div></div><div className="tableWrap"><table><thead><tr><th>Receipt</th><th>Edited By</th><th>Date / Time</th><th>Changes</th><th>Reason</th></tr></thead><tbody>{receiptAudits.map(a=><tr key={a.id}><td><b>{a.receiptNo}</b></td><td>{a.editedBy}</td><td>{a.editedAt}</td><td><div className="auditChanges">{Object.entries(a.changes||{}).map(([field,v]:any)=><span key={field}><b>{field.replaceAll('_',' ')}</b>: {String(v?.from??'—')} → {String(v?.to??'—')}</span>)}</div></td><td>{a.reason||'—'}</td></tr>)}</tbody></table>{!receiptAudits.length&&<div className="empty">No receipt edits have been recorded.</div>}</div></section></>}
+ {active==='admin'&&isAdmin&&<><section className="card donorCard"><div className="tableHead"><b>{L.userManagement}</b><button className="primary" onClick={()=>{resetForm();setModal('user')}}>+ {L.addUser}</button></div><div className="tableWrap"><table><thead><tr><th>{L.loginName}</th><th>Name</th><th>Mobile</th><th>{L.role}</th><th>{L.active}</th>{isSuperAdmin&&<th>Action</th>}</tr></thead><tbody>{users.map(u=><tr key={u.userId}><td><b>{u.loginName}</b></td><td>{u.name}</td><td>{u.mobile||'—'}</td><td>{u.role}</td><td>{u.active?'Yes':'No'}</td>{isSuperAdmin&&<td><button className="smallBtn" onClick={()=>openEditUser(u)}>✎ {L.editUser}</button></td>}</tr>)}</tbody></table></div></section><section className="card driveIntegrationCard"><div className="tableHead"><div><b>Google Drive Receipts</b><small>{driveConnected?'Connected — receipt PDFs can be uploaded automatically.':'Not connected — connect the Mandal Google Drive account.'}</small></div><button className={driveConnected?'smallBtn':'primary'} disabled={driveBusy} onClick={connectGoogleDrive}>{driveBusy?'Connecting...':driveConnected?'Reconnect Google Drive':'Connect Google Drive'}</button></div></section><section className="card"><div className="tableHead"><b>Routes</b><button className="ghost" onClick={()=>{resetForm();setModal('route')}}>+ {L.addRoute}</button></div><div className="routeManager">{routes.map(r=>{const count=donors.filter(d=>d.routeId===r.id).length;return <div className="routeManageRow" key={r.id}><div><b>{r.name}</b><small>{count} {lang==='mr'?'देणगीदार':'donors'}</small></div><div className="rowActions"><button className="smallBtn" onClick={()=>renameRoute(r)}>✎ {L.editRoute}</button><button className="smallBtn dangerBtn" onClick={()=>deleteRoute(r)} disabled={count>0} title={count>0?L.routeInUse:''}>🗑 {L.deleteRoute}</button></div></div>})}</div></section><section className="card auditCard"><div className="tableHead"><div><b>{L.receiptAudit}</b><small>{receiptAudits.length} recorded edit(s)</small></div></div><div className="tableWrap"><table><thead><tr><th>Receipt</th><th>Edited By</th><th>Date / Time</th><th>Changes</th><th>Reason</th></tr></thead><tbody>{receiptAudits.map(a=><tr key={a.id}><td><b>{a.receiptNo}</b></td><td>{a.editedBy}</td><td>{a.editedAt}</td><td><div className="auditChanges">{Object.entries(a.changes||{}).map(([field,v]:any)=><span key={field}><b>{field.replaceAll('_',' ')}</b>: {String(v?.from??'—')} → {String(v?.to??'—')}</span>)}</div></td><td>{a.reason||'—'}</td></tr>)}</tbody></table>{!receiptAudits.length&&<div className="empty">No receipt edits have been recorded.</div>}</div></section></>}
  </main>
  {modal&&<div className="overlay"><div className={`modal ${modal==='receipt'?'receiptModal':''} ${(modal==='importDonors'||modal==='importMembers')?'wideModal':''}`}><div className="modalHead"><div><small>RYM_VARGANI · Live Database</small><h3>{modal==='donor'?L.addDonor:modal==='member'?L.addMember:modal==='collect'?`${L.collect} — ${selected?.name}`:modal==='receipt'?L.receipt:modal==='editReceipt'?L.editReceipt:modal==='user'?L.addUser:modal==='editUser'?L.editUser:modal==='route'?L.addRoute:modal==='importDonors'?L.bulkDonors:L.bulkMembers}</h3></div><button onClick={()=>{setModal(null);setPreview(null);setEditingUser(null)}}>×</button></div>
  {modal==='donor'&&<div className="formGrid"><Field label={`${L.name} *`}><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></Field><Field label={L.contact}><input value={form.contactPerson} onChange={e=>setForm({...form,contactPerson:e.target.value})}/></Field><Field label={L.mobile}><input value={form.mobile} onChange={e=>setForm({...form,mobile:e.target.value})}/></Field><Field label={`${L.pan} (${L.optional})`}><input value={form.pan} onChange={e=>setForm({...form,pan:e.target.value.toUpperCase()})} placeholder="ABCDE1234F"/></Field><Field label={`${L.reference} (${L.optional})`}><input value={form.reference} onChange={e=>setForm({...form,reference:e.target.value})} placeholder="Member / reference name"/></Field><Field label={L.route}><select value={form.routeId} onChange={e=>setForm({...form,routeId:e.target.value})}><option value="">—</option>{routes.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select></Field><Field label="Current Expected Amount"><input type="number" value={form.expected} onChange={e=>setForm({...form,expected:e.target.value})}/></Field><Field label={L.lastDonation}><input type="number" value={form.lastYear} onChange={e=>setForm({...form,lastYear:e.target.value})}/></Field><Field label={L.lastReceipt}><input value={form.lastReceipt} onChange={e=>setForm({...form,lastReceipt:e.target.value})}/></Field></div>}

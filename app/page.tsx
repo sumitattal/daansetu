@@ -502,6 +502,7 @@ function DaywiseReport({receipts,date,setDate}:{receipts:Receipt[],date:string,s
  const pendingRows=receipts.filter(r=>r.paymentStatus==='receipt_pending'&&r.date===display)
  const total=(mode:string)=>paidRows.filter(r=>r.mode.toLowerCase()===mode.toLowerCase()).reduce((sum,r)=>sum+r.amount,0)
  const cash=total('Cash'),upi=total('UPI'),cheque=total('Cheque'),pending=pendingRows.reduce((sum,r)=>sum+r.amount,0),dayTotal=cash+upi+cheque
+ const receiptsIssuedToday=receipts.filter(r=>r.date===display).length
  const allRows=[...paidRows,...pendingRows]
  const rows=modeFilter==='All'?allRows:modeFilter==='Receipt Given - Payment Pending'?pendingRows:paidRows.filter(r=>r.mode.toLowerCase()===modeFilter.toLowerCase())
  const displayMode=(r:Receipt)=>r.paymentStatus==='receipt_pending'?'Receipt Given - Payment Pending':r.mode
@@ -522,6 +523,7 @@ function DaywiseReport({receipts,date,setDate}:{receipts:Receipt[],date:string,s
    <Stat label="Cheque Collection" value={money(cheque)} icon="▤"/>
    <Stat label="Receipt Issued - Payment Pending" value={money(pending)} icon="⌛" warn/>
    <Stat label="Total Day's Collection" value={money(dayTotal)} icon="Σ" accent/>
+   <Stat label="Receipts Issued Today" value={String(receiptsIssuedToday)} icon="#"/>
   </section>
 
   <section className="card dayActivityCard">

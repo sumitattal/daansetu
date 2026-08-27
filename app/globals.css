@@ -430,3 +430,11 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
  .dashboardDonorActions{gap:10px}
  .dashboardLastYear{width:100%;min-width:0;justify-content:space-between;border-width:1px}
 }
+
+/* RYM_VARGANI V1.7.2.4 — mobile donor edit + partial search */
+.editDonorBtn{border-color:#9bb9ad!important}
+@media(max-width:700px){
+ .donorMobileActionGrid{display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important;width:100%}
+ .donorMobileActionGrid .primary{grid-column:1/-1}
+ .donorMobileActionGrid .editDonorBtn,.donorMobileActionGrid .dangerBtn{width:100%;min-height:44px}
+}

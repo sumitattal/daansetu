@@ -555,3 +555,57 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
  }
  .dayActivityTable .dayValue b{color:#17231f!important;font-size:13px!important}
 }
+
+/* RYM_VARGANI V1.7.2.8 — Day-wise mobile horizontal list */
+@media(max-width:700px){
+ .dayActivityCard{padding:14px 10px!important}
+ .dayActivityWrap{
+   display:block!important;
+   width:100%!important;
+   overflow-x:auto!important;
+   overflow-y:visible!important;
+   -webkit-overflow-scrolling:touch!important;
+ }
+ .dayActivityTable{
+   display:table!important;
+   width:max-content!important;
+   min-width:1040px!important;
+   border-collapse:collapse!important;
+ }
+ .dayActivityTable thead{display:table-header-group!important}
+ .dayActivityTable tbody{display:table-row-group!important}
+ .dayActivityTable tr{
+   display:table-row!important;
+   width:auto!important;
+   margin:0!important;
+   padding:0!important;
+   border:0!important;
+   background:#fff!important;
+   box-shadow:none!important;
+ }
+ .dayActivityTable th,
+ .dayActivityTable td{
+   display:table-cell!important;
+   width:auto!important;
+   min-width:120px!important;
+   padding:11px 12px!important;
+   border-bottom:1px solid #e1e7e4!important;
+   text-align:left!important;
+   vertical-align:middle!important;
+   white-space:nowrap!important;
+   color:#17231f!important;
+   font-size:13px!important;
+ }
+ .dayActivityTable th:nth-child(2),
+ .dayActivityTable td:nth-child(2){min-width:220px!important}
+ .dayActivityTable th:nth-child(3),
+ .dayActivityTable td:nth-child(3){min-width:190px!important}
+ .dayActivityTable th:nth-child(6),
+ .dayActivityTable td:nth-child(6){min-width:190px!important}
+ .dayActivityTable td:before{content:none!important;display:none!important}
+ .dayActivityTable .dayValue{
+   display:inline!important;
+   color:#17231f!important;
+   white-space:nowrap!important;
+ }
+}

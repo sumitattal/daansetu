@@ -609,3 +609,44 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
    white-space:nowrap!important;
  }
 }
+
+/* RYM_VARGANI V1.7.2.9 — Day-wise Summary / Detailed switch */
+.dayActivityHead{align-items:center}
+.dayViewToggle{display:inline-flex;gap:4px;padding:4px;background:#eef4f1;border-radius:10px}
+.dayViewToggle button{border:0;background:transparent;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer;color:#4f5e57}
+.dayViewToggle button.active{background:#176a4e;color:#fff}
+.daySummaryList{width:100%;overflow:hidden}
+.daySummaryHeader,.daySummaryRow{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1.2fr) minmax(110px,.6fr);gap:12px;align-items:center}
+.daySummaryHeader{padding:10px 12px;background:#f5f8f6;border-bottom:1px solid #dfe6e2;font-size:12px;font-weight:700;color:#66746d}
+.daySummaryRow{padding:11px 12px;border-bottom:1px solid #e5ebe8}
+.daySummaryRow:last-child{border-bottom:0}
+.summaryDonor{font-weight:700;min-width:0;overflow-wrap:anywhere}
+.summaryMode{color:#526159}
+.summaryAmount{text-align:right}
+.dayDetailedList{display:grid;gap:12px}
+.dayDetailedCard{border:1px solid #dfe6e2;border-radius:14px;padding:14px;background:#fff}
+.detailTop{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding-bottom:10px;border-bottom:1px solid #e8eeeb}
+.detailTop div{display:flex;flex-direction:column;gap:3px}.detailTop small,.detailGrid small{color:#6b7872;font-size:11px}
+.detailTop strong{font-size:18px}
+.detailGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.detailGrid>div{display:flex;flex-direction:column;gap:3px}
+
+@media(max-width:700px){
+ .dayActivityHead{align-items:stretch!important}
+ .dayViewToggle{width:100%;display:grid;grid-template-columns:1fr 1fr}
+ .dayViewToggle button{min-height:42px}
+ .daySummaryHeader,.daySummaryRow{
+   grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) auto;
+   gap:8px;
+ }
+ .daySummaryHeader{padding:8px 6px;font-size:10px}
+ .daySummaryRow{padding:10px 6px;font-size:12px}
+ .summaryDonor{font-size:12px}
+ .summaryMode{font-size:11px;line-height:1.25;overflow-wrap:anywhere}
+ .summaryAmount{font-size:12px;white-space:nowrap}
+ .dayDetailedCard{padding:12px;border-radius:12px}
+ .detailTop{align-items:center}
+ .detailTop strong{font-size:16px;white-space:nowrap}
+ .detailGrid{grid-template-columns:1fr 1fr;gap:10px}
+ .detailGrid b{font-size:12px;overflow-wrap:anywhere}
+}

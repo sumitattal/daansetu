@@ -496,6 +496,7 @@ function DatewiseGraph({receipts}:{receipts:Receipt[]}){
 function PendingPayments({receipts,onSettle}:{receipts:Receipt[],onSettle:(r:Receipt)=>void}){const rows=receipts.filter(r=>r.paymentStatus==='receipt_pending');return <section className="card donorCard"><div className="tableHead"><div><b>Receipt Given - Payment Pending</b><small>{rows.length} pending receipts · {money(rows.reduce((s,r)=>s+r.amount,0))}</small></div></div><div className="tableWrap"><table><thead><tr><th>Receipt No.</th><th>Donor</th><th>Date</th><th>Area</th><th>Amount</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><b>{r.receiptNo}</b></td><td>{r.donorName}<small>{r.mobile}</small></td><td>{r.date}</td><td>{r.areaName}</td><td><b>{money(r.amount)}</b></td><td><button className="smallBtn primary" onClick={()=>onSettle(r)}>Mark Payment Received</button></td></tr>)}</tbody></table>{!rows.length&&<div className="empty">No pending receipt payments.</div>}</div></section>}
 function DaywiseReport({receipts,date,setDate}:{receipts:Receipt[],date:string,setDate:(v:string)=>void}){
  const [modeFilter,setModeFilter]=useState('All')
+ const [reportView,setReportView]=useState<'summary'|'detailed'>('summary')
  const display=date.split('-').reverse().join('-')
  const paidRows=receipts.filter(r=>r.paymentStatus==='paid'&&r.paymentReceivedDate===display)
  const pendingRows=receipts.filter(r=>r.paymentStatus==='receipt_pending'&&r.date===display)
@@ -504,7 +505,58 @@ function DaywiseReport({receipts,date,setDate}:{receipts:Receipt[],date:string,s
  const allRows=[...paidRows,...pendingRows]
  const rows=modeFilter==='All'?allRows:modeFilter==='Receipt Given - Payment Pending'?pendingRows:paidRows.filter(r=>r.mode.toLowerCase()===modeFilter.toLowerCase())
  const displayMode=(r:Receipt)=>r.paymentStatus==='receipt_pending'?'Receipt Given - Payment Pending':r.mode
- return <><section className="card dayFilter"><div><b>Day-wise Collection Report</b><small>Paid amounts use Payment Received Date; pending receipts use Receipt Date</small></div><div className="dayFilterControls"><input type="date" value={date} onChange={e=>setDate(e.target.value)}/><select value={modeFilter} onChange={e=>setModeFilter(e.target.value)}><option>All</option><option>Cash</option><option>UPI</option><option>Bank</option><option>Cheque</option><option>Receipt Given - Payment Pending</option></select></div></section><section className="stats dayStats"><Stat label="Cash Collection" value={money(cash)} icon="₹"/><Stat label="UPI Collection" value={money(upi)} icon="↗" accent/><Stat label="Cheque Collection" value={money(cheque)} icon="▤"/><Stat label="Receipt Issued - Payment Pending" value={money(pending)} icon="⌛" warn/><Stat label="Total Day's Collection" value={money(dayTotal)} icon="Σ" accent/></section><section className="card dayActivityCard"><div className="tableHead"><div><b>Activity on {display}</b><small>{modeFilter==='All'?'All payment modes':modeFilter} · {rows.length} record(s)</small></div></div><div className="tableWrap dayActivityWrap"><table className="dayActivityTable"><thead><tr><th>Receipt</th><th>Donor Name</th><th>Mode of Payment</th><th>Amount</th><th>Receipt Date</th><th>Payment Received Date</th><th>Status</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td data-label="Receipt"><span className="dayValue">{r.receiptNo}</span></td><td data-label="Donor Name"><span className="dayValue"><b>{r.donorName}</b></span></td><td data-label="Mode of Payment"><span className="dayValue">{displayMode(r)}</span></td><td data-label="Amount"><span className="dayValue"><b>{money(r.amount)}</b></span></td><td data-label="Receipt Date"><span className="dayValue">{r.date}</span></td><td data-label="Payment Received Date"><span className="dayValue">{r.paymentReceivedDate||'—'}</span></td><td data-label="Status"><span className="dayValue">{r.paymentStatus==='receipt_pending'?'Payment Pending':'Paid'}</span></td></tr>)}</tbody></table>{!rows.length&&<div className="empty">No matching collection activity on this date.</div>}</div></section></>}
+ return <>
+  <section className="card dayFilter">
+   <div><b>Day-wise Collection Report</b><small>Paid amounts use Payment Received Date; pending receipts use Receipt Date</small></div>
+   <div className="dayFilterControls">
+    <input type="date" value={date} onChange={e=>setDate(e.target.value)}/>
+    <select value={modeFilter} onChange={e=>setModeFilter(e.target.value)}>
+     <option>All</option><option>Cash</option><option>UPI</option><option>Bank</option><option>Cheque</option><option>Receipt Given - Payment Pending</option>
+    </select>
+   </div>
+  </section>
+
+  <section className="stats dayStats">
+   <Stat label="Cash Collection" value={money(cash)} icon="₹"/>
+   <Stat label="UPI Collection" value={money(upi)} icon="↗" accent/>
+   <Stat label="Cheque Collection" value={money(cheque)} icon="▤"/>
+   <Stat label="Receipt Issued - Payment Pending" value={money(pending)} icon="⌛" warn/>
+   <Stat label="Total Day's Collection" value={money(dayTotal)} icon="Σ" accent/>
+  </section>
+
+  <section className="card dayActivityCard">
+   <div className="tableHead dayActivityHead">
+    <div><b>Activity on {display}</b><small>{modeFilter==='All'?'All payment modes':modeFilter} · {rows.length} record(s)</small></div>
+    <div className="dayViewToggle" role="group" aria-label="Day-wise report view">
+     <button type="button" className={reportView==='summary'?'active':''} onClick={()=>setReportView('summary')}>Summary</button>
+     <button type="button" className={reportView==='detailed'?'active':''} onClick={()=>setReportView('detailed')}>Detailed View</button>
+    </div>
+   </div>
+
+   {reportView==='summary'?<div className="daySummaryList">
+    <div className="daySummaryHeader"><span>Donor Name</span><span>Mode of Payment</span><span>Amount</span></div>
+    {rows.map(r=><div className="daySummaryRow" key={`summary-${r.id}`}>
+     <span className="summaryDonor">{r.donorName}</span>
+     <span className="summaryMode">{displayMode(r)}</span>
+     <span className="summaryAmount"><b>{money(r.amount)}</b></span>
+    </div>)}
+    {!rows.length&&<div className="empty">No matching collection activity on this date.</div>}
+   </div>:<div className="dayDetailedList">
+    {rows.map(r=><article className="dayDetailedCard" key={`detail-${r.id}`}>
+     <div className="detailTop"><div><small>Donor Name</small><b>{r.donorName}</b></div><strong>{money(r.amount)}</strong></div>
+     <div className="detailGrid">
+      <div><small>Receipt</small><b>{r.receiptNo}</b></div>
+      <div><small>Mode of Payment</small><b>{displayMode(r)}</b></div>
+      <div><small>Amount</small><b>{money(r.amount)}</b></div>
+      <div><small>Receipt Date</small><b>{r.date}</b></div>
+      <div><small>Payment Received Date</small><b>{r.paymentReceivedDate||'—'}</b></div>
+      <div><small>Status</small><b>{r.paymentStatus==='receipt_pending'?'Payment Pending':'Paid'}</b></div>
+     </div>
+    </article>)}
+    {!rows.length&&<div className="empty">No matching collection activity on this date.</div>}
+   </div>}
+  </section>
+ </> }
 function Reports({donors,receipts,canDownload}:{donors:Donor[],receipts:Receipt[],canDownload:boolean}){
  const [collectionExpanded,setCollectionExpanded]=useState(false)
  const total=receipts.filter(r=>r.paymentStatus==='paid').reduce((sum,r)=>sum+r.amount,0),pending=donors.reduce((sum,d)=>sum+Math.max(0,d.expected-d.received),0)

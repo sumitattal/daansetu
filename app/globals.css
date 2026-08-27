@@ -387,3 +387,46 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
  .receiptSearchWrap{width:100%;min-width:0}
  .receiptSearchWrap .receiptSearch{width:100%;font-size:16px}
 }
+
+/* RYM_VARGANI V1.7.2 dashboard search, reminder and day-mode filter */
+.dashboardDonorSearch .tableHead{align-items:center}
+.dashboardSearchResults{display:grid;gap:6px;margin-top:12px;max-height:330px;overflow:auto}
+.dashboardDonorResult{display:flex;justify-content:space-between;gap:14px;align-items:center;width:100%;padding:11px 13px;border:1px solid #e1e7e4;border-radius:10px;background:#fff;text-align:left;cursor:pointer}
+.dashboardDonorResult:hover,.dashboardDonorResult.selected{border-color:#1f7557;background:#f5faf7}
+.dashboardDonorResult span{font-size:12px;color:#66736d;text-align:right}
+.dashboardDonorActions{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:12px;padding:14px;border-radius:12px;background:#f7faf8;border:1px solid #dfe7e3}
+.dashboardDonorActions small{display:block;margin-top:3px}
+.reminderBtn{border-color:#d8a900!important;background:#fff9dc!important}
+.dayFilterControls{display:flex;gap:8px;align-items:center}
+.dayFilterControls select,.dayFilterControls input{min-height:40px}
+@media(max-width:700px){
+ .dashboardDonorSearch .tableHead,.dashboardDonorActions,.dayFilter{align-items:stretch!important;flex-direction:column}
+ .dashboardDonorSearch .search,.dayFilterControls{width:100%}
+ .dashboardDonorActions .rowActions,.dayFilterControls{display:flex}
+ .dashboardDonorActions .rowActions button,.dayFilterControls>*{flex:1;min-width:0}
+}
+
+/* RYM_VARGANI V1.7.2.2 — dashboard pending donor count + last-year donation */
+.dashboardStats{grid-template-columns:repeat(5,minmax(0,1fr))}
+.dashboardDonorIdentity{min-width:220px}
+.dashboardLastYear{
+  min-width:260px;
+  padding:10px 18px;
+  border:2px solid #1d1d1d;
+  background:#fff;
+  border-radius:2px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+}
+.dashboardLastYear small{margin:0;color:#6c746f;font-size:12px}
+.dashboardLastYear b{font-size:18px}
+@media(max-width:1200px){
+ .dashboardStats{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:700px){
+ .dashboardStats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .dashboardDonorActions{gap:10px}
+ .dashboardLastYear{width:100%;min-width:0;justify-content:space-between;border-width:1px}
+}

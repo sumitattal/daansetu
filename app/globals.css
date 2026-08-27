@@ -496,3 +496,62 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
  .dayActivityTable td:before{content:attr(data-label);font-size:12px;font-weight:700;color:#6c7872;text-align:left;flex:0 0 42%}
  .dayActivityTable td b{font-size:14px}
 }
+
+/* RYM_VARGANI V1.7.2.7 — Day-wise mobile list visibility fix */
+@media(max-width:700px){
+ .dayActivityCard{padding:14px 12px!important}
+ .dayActivityCard .tableHead{padding:0 2px 12px!important}
+ .dayActivityWrap{overflow:visible!important;width:100%!important}
+ .dayActivityTable{display:block!important;width:100%!important;border-collapse:collapse!important}
+ .dayActivityTable thead{display:none!important}
+ .dayActivityTable tbody{display:block!important;width:100%!important}
+ .dayActivityTable tr{
+   display:block!important;
+   width:100%!important;
+   margin:0!important;
+   padding:8px 0!important;
+   border:0!important;
+   border-bottom:1px solid #dfe6e2!important;
+   border-radius:0!important;
+   background:transparent!important;
+   box-shadow:none!important;
+ }
+ .dayActivityTable tr:last-child{border-bottom:0!important}
+ .dayActivityTable td{
+   display:grid!important;
+   grid-template-columns:minmax(118px,42%) minmax(0,58%)!important;
+   width:100%!important;
+   box-sizing:border-box!important;
+   align-items:start!important;
+   gap:10px!important;
+   padding:6px 4px!important;
+   border:0!important;
+   text-align:left!important;
+   color:#17231f!important;
+   font-size:13px!important;
+   line-height:1.35!important;
+   visibility:visible!important;
+   opacity:1!important;
+ }
+ .dayActivityTable td:before{
+   content:attr(data-label)!important;
+   display:block!important;
+   min-width:0!important;
+   color:#6c7872!important;
+   font-size:12px!important;
+   font-weight:700!important;
+   text-align:left!important;
+   visibility:visible!important;
+ }
+ .dayActivityTable .dayValue{
+   display:block!important;
+   min-width:0!important;
+   color:#17231f!important;
+   text-align:left!important;
+   overflow-wrap:anywhere!important;
+   word-break:break-word!important;
+   visibility:visible!important;
+   opacity:1!important;
+ }
+ .dayActivityTable .dayValue b{color:#17231f!important;font-size:13px!important}
+}

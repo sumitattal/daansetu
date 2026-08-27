@@ -650,3 +650,10 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
  .detailGrid{grid-template-columns:1fr 1fr;gap:10px}
  .detailGrid b{font-size:12px;overflow-wrap:anywhere}
 }
+
+/* RYM_VARGANI V1.7.3.1 — latest-first datewise + pending reminder */
+.pendingReceiptActions{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:700px){
+ .pendingReceiptActions{display:grid;grid-template-columns:1fr 1fr;width:100%}
+ .pendingReceiptActions button{width:100%;min-height:42px}
+}

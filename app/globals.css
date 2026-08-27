@@ -438,3 +438,61 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
  .donorMobileActionGrid .primary{grid-column:1/-1}
  .donorMobileActionGrid .editDonorBtn,.donorMobileActionGrid .dangerBtn{width:100%;min-height:44px}
 }
+
+
+/* RYM_VARGANI V1.7.2.5 — install page */
+.installPage{min-height:100vh;background:linear-gradient(180deg,#f4faf7 0%,#fff 45%);padding:28px 18px 50px;color:#16372c}
+.installHero{max-width:880px;margin:0 auto 18px;display:flex;align-items:center;gap:18px;background:#fff;border:1px solid #dce9e2;border-radius:20px;padding:22px;box-shadow:0 10px 30px rgba(21,72,54,.07)}
+.installHero h1{margin:2px 0 6px;font-size:34px}
+.installHero p{margin:0;color:#617068;line-height:1.55}
+.installHero small{color:#738079}
+.installLogo{width:84px;height:84px;object-fit:contain;border-radius:16px;background:#fff}
+.installCard{max-width:880px;margin:14px auto;background:#fff;border:1px solid #dce9e2;border-radius:18px;padding:22px;box-shadow:0 6px 20px rgba(21,72,54,.05)}
+.installCard.activePlatform{border:2px solid #1f7557;box-shadow:0 8px 26px rgba(31,117,87,.12)}
+.platformHead{display:flex;align-items:center;gap:12px}
+.platformHead h2{margin:0}.platformHead p{margin:3px 0 0;color:#75817b}
+.platformIcon{font-size:34px;min-width:40px;text-align:center}
+.installCard ol{padding-left:22px;line-height:1.75;color:#42564d}
+.installPrimary,.installSecondary{border:0;border-radius:12px;padding:13px 18px;font-weight:700;font-size:16px;cursor:pointer}
+.installPrimary{background:#176a4e;color:#fff;width:100%;margin-top:4px}
+.installSecondary{background:#eef6f2;color:#165f48}
+.installHint{display:block;margin-top:10px;color:#68756f;line-height:1.5}
+.iosTip{background:#fff8de;border:1px solid #ead790;padding:12px 14px;border-radius:10px;color:#665521;line-height:1.55}
+.installMessage{max-width:880px;margin:12px auto;padding:12px 15px;background:#eef8f3;border:1px solid #bddccb;border-radius:10px}
+.compactInstallCard{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.compactInstallCard h3{margin:0}
+.installFooter{max-width:880px;margin:28px auto 0;text-align:center;color:#78857f;font-size:13px}
+.shareSymbol{font-size:18px}
+@media(max-width:650px){
+ .installPage{padding:14px 12px 34px}
+ .installHero{align-items:flex-start;padding:16px;border-radius:16px}
+ .installHero h1{font-size:27px}
+ .installHero p{font-size:14px}
+ .installLogo{width:64px;height:64px}
+ .installCard{padding:17px;border-radius:15px}
+ .compactInstallCard{align-items:stretch;flex-direction:column}
+ .installSecondary{width:100%}
+}
+
+/* RYM_VARGANI V1.7.2.6 — dashboard/report/day-wise enhancements */
+.dashboardStats{grid-template-columns:repeat(6,minmax(0,1fr))}
+.expandableReportHead{padding:0!important;overflow:hidden}
+.reportExpandButton{width:100%;border:0;background:transparent;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;cursor:pointer;color:inherit}
+.reportExpandButton div{display:flex;flex-direction:column;gap:4px}
+.reportExpandButton small{color:#6c7872;font-weight:400}
+.expandChevron{font-size:16px}
+.expandedReportActions{border-top:1px solid #e3e9e6;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.expandedReportActions small{color:#6c7872;line-height:1.5}
+@media(max-width:1400px){.dashboardStats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){
+ .dashboardStats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .expandedReportActions{align-items:stretch;flex-direction:column}
+ .expandedReportActions .primary{width:100%}
+ .dayActivityWrap{overflow:visible}
+ .dayActivityTable,.dayActivityTable tbody,.dayActivityTable tr,.dayActivityTable td{display:block;width:100%}
+ .dayActivityTable thead{display:none}
+ .dayActivityTable tr{margin:0 0 12px;padding:10px 12px;border:1px solid #e0e7e3;border-radius:12px;background:#fff}
+ .dayActivityTable td{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:7px 0!important;border:0!important;text-align:right}
+ .dayActivityTable td:before{content:attr(data-label);font-size:12px;font-weight:700;color:#6c7872;text-align:left;flex:0 0 42%}
+ .dayActivityTable td b{font-size:14px}
+}

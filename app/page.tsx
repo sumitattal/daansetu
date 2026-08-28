@@ -597,7 +597,22 @@ function DaywiseReport({receipts,date,setDate}:{receipts:Receipt[],date:string,s
  </> }
 function Reports({donors,receipts,canDownload}:{donors:Donor[],receipts:Receipt[],canDownload:boolean}){
  const [collectionExpanded,setCollectionExpanded]=useState(false)
+ const [receiptUsageExpanded,setReceiptUsageExpanded]=useState(false)
+ const [receiptUsageFilter,setReceiptUsageFilter]=useState<'all'|'used'|'unused'>('all')
  const total=receipts.filter(r=>r.paymentStatus==='paid').reduce((sum,r)=>sum+r.amount,0),pending=donors.reduce((sum,d)=>sum+Math.max(0,d.expected-d.received),0)
+ const numericReceipts=receipts.map(r=>({receipt:r,no:Number.parseInt(String(r.receiptNo).trim(),10)})).filter(x=>Number.isInteger(x.no)&&String(x.no)===String(x.receipt.receiptNo).trim()&&x.no>=101&&x.no<=400)
+ const receiptByNumber=new Map<number,Receipt>()
+ numericReceipts.forEach(x=>receiptByNumber.set(x.no,x.receipt))
+ const largestReceipt=numericReceipts.length?Math.max(...numericReceipts.map(x=>x.no)):0
+ const receiptUsageRows=Array.from({length:300},(_,i)=>{
+  const no=i+101
+  const receipt=receiptByNumber.get(no)
+  const status: 'Used'|'Unused'|'Not Yet Reached'=receipt?'Used':largestReceipt&&no<=largestReceipt?'Unused':'Not Yet Reached'
+  return {no,receipt,status}
+ })
+ const unusedBelowLargest=receiptUsageRows.filter(x=>x.status==='Unused')
+ const usedInRange=receiptUsageRows.filter(x=>x.status==='Used')
+ const visibleReceiptUsageRows=receiptUsageRows.filter(x=>receiptUsageFilter==='all'?true:receiptUsageFilter==='used'?x.status==='Used':x.status==='Unused')
  const modes=['Cash','UPI','Bank','Cheque','Receipt Given - Payment Pending'].map(mode=>({mode,amount:mode==='Receipt Given - Payment Pending'?receipts.filter(r=>r.paymentStatus==='receipt_pending').reduce((sum,r)=>sum+r.amount,0):receipts.filter(r=>r.paymentStatus==='paid'&&r.mode.toLowerCase()===mode.toLowerCase()).reduce((sum,r)=>sum+r.amount,0)}))
  const routeNames=Array.from(new Set(donors.map(d=>d.route).filter(Boolean)))
  async function downloadExcel(){
@@ -631,6 +646,40 @@ function Reports({donors,receipts,canDownload}:{donors:Donor[],receipts:Receipt[
   {collectionExpanded&&<div className="expandedReportActions"><small>Sr No. · DonarName · ContactNumber · PAN · ReceiptNumber · ReceiptDate · CollectionDate · AreaName · ModeofPayment · Amount</small>{canDownload&&<button className="primary" onClick={downloadExcel}>↓ Download Collection Excel</button>}</div>}
  </section>
  {collectionExpanded&&<section className="card collectionReportCard"><div className="tableWrap"><table><thead><tr><th>Sr No.</th><th>Donor</th><th>Contact</th><th>PAN</th><th>Receipt No.</th><th>Receipt Date</th><th>Collection Date</th><th>Area</th><th>Mode</th><th>Amount</th></tr></thead><tbody>{receipts.map((r,i)=>{const donor=donors.find(d=>d.id===r.donorId);return <tr key={r.id}><td>{i+1}</td><td>{r.donorName}</td><td>{donor?.mobile||r.mobile}</td><td>{r.pan||donor?.pan||'—'}</td><td>{r.receiptNo}</td><td>{r.date}</td><td>{r.paymentReceivedDate||r.date}</td><td>{r.areaName||donor?.route}</td><td>{r.paymentStatus==='receipt_pending'?'Receipt Given - Payment Pending':r.mode}</td><td><b>{money(r.amount)}</b></td></tr>})}</tbody></table></div></section>}
+
+ <section className="card reportDownloadCard expandableReportHead receiptUsageReport">
+  <button type="button" className="reportExpandButton" onClick={()=>setReceiptUsageExpanded(v=>!v)} aria-expanded={receiptUsageExpanded}>
+   <div><b>Receipt Number Usage Report (101–400)</b><small>Used numbers and missing / unused receipt numbers below the highest generated receipt · {receiptUsageExpanded?'Click to collapse':'Click to expand'}</small></div>
+   <span className="expandChevron">{receiptUsageExpanded?'▲':'▼'}</span>
+  </button>
+  {receiptUsageExpanded&&<div className="receiptUsageSummary">
+   <div><small>Largest Receipt No.</small><b>{largestReceipt||'—'}</b></div>
+   <div><small>Used (101–400)</small><b>{usedInRange.length}</b></div>
+   <div><small>Unused Below Largest</small><b>{unusedBelowLargest.length}</b></div>
+  </div>}
+ </section>
+ {receiptUsageExpanded&&<section className="card collectionReportCard">
+  <div className="tableHead">
+   <div><b>Receipt Number Register</b><small>Range 101 to 400 · Unused means a gap below receipt no. {largestReceipt||'—'}</small></div>
+   <select value={receiptUsageFilter} onChange={e=>setReceiptUsageFilter(e.target.value as 'all'|'used'|'unused')}>
+    <option value="all">All 101–400</option>
+    <option value="used">Used Only</option>
+    <option value="unused">Unused Below Largest Only</option>
+   </select>
+  </div>
+  <div className="tableWrap"><table>
+   <thead><tr><th>Receipt No.</th><th>Status</th><th>Donor</th><th>Receipt Date</th><th>Mode</th><th>Amount</th></tr></thead>
+   <tbody>{visibleReceiptUsageRows.map(row=><tr key={`receipt-use-${row.no}`} className={row.status==='Unused'?'receiptUnusedRow':row.status==='Used'?'receiptUsedRow':''}>
+    <td><b>{row.no}</b></td>
+    <td><b>{row.status}</b></td>
+    <td>{row.receipt?.donorName||'—'}</td>
+    <td>{row.receipt?.date||'—'}</td>
+    <td>{row.receipt?(row.receipt.paymentStatus==='receipt_pending'?'Receipt Given - Payment Pending':row.receipt.mode):'—'}</td>
+    <td>{row.receipt?<b>{money(row.receipt.amount)}</b>:'—'}</td>
+   </tr>)}</tbody>
+  </table></div>
+ </section>}
+
  <section className="grid2"><div className="card"><b>Payment Mode Report</b><div className="reportRows">{modes.map(x=><div key={x.mode}><span>{x.mode}</span><b>{money(x.amount)}</b></div>)}</div></div><div className="card"><b>Route-wise Report</b><div className="reportRows">{routeNames.map(route=>{const ds=donors.filter(d=>d.route===route);return <div key={route}><span>{route}<small>{ds.length} donors · Pending {money(ds.reduce((sum,d)=>sum+Math.max(0,d.expected-d.received),0))}</small></span><b>{money(ds.reduce((sum,d)=>sum+d.received,0))}</b></div>})}</div></div></section></>
 }
 

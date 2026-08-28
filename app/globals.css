@@ -657,3 +657,15 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
  .pendingReceiptActions{display:grid;grid-template-columns:1fr 1fr;width:100%}
  .pendingReceiptActions button{width:100%;min-height:42px}
 }
+
+/* V1.7.3.6 Receipt Number Usage Report */
+.receiptUsageSummary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px 16px;border-top:1px solid var(--border)}
+.receiptUsageSummary>div{display:flex;flex-direction:column;gap:4px}
+.receiptUsageSummary small{opacity:.72}
+.receiptUsageSummary b{font-size:1.15rem}
+.receiptUsageReport+.collectionReportCard .tableHead select{min-width:220px}
+@media(max-width:700px){
+ .receiptUsageSummary{grid-template-columns:1fr}
+ .receiptUsageReport+.collectionReportCard .tableHead{align-items:stretch;gap:10px}
+ .receiptUsageReport+.collectionReportCard .tableHead select{width:100%;min-width:0}
+}

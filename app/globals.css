@@ -669,3 +669,18 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
  .receiptUsageReport+.collectionReportCard .tableHead{align-items:stretch;gap:10px}
  .receiptUsageReport+.collectionReportCard .tableHead select{width:100%;min-width:0}
 }
+
+/* V1.7.4.0 final donation status */
+.finalDonationCheck{grid-column:1/-1;align-items:flex-start}
+.finalDonationCheck span{display:flex;flex-direction:column;gap:3px}
+.finalDonationCheck small{font-weight:400;opacity:.72;line-height:1.35}
+
+/* V1.7.4.1 donor removal choice */
+.deleteDonorChoice{display:grid;gap:14px}
+.deleteDonorNotice{display:flex;flex-direction:column;gap:4px}
+.deleteDonorNotice p{margin:8px 0 0;line-height:1.45}
+.deleteDonorMessagePreview{max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:14px;padding:14px;background:var(--surface-soft,rgba(127,127,127,.06))}
+.deleteDonorMessagePreview>small{display:block;margin-bottom:10px;font-weight:700;opacity:.7}
+.deleteDonorMessagePreview p{margin:0 0 10px;line-height:1.5}
+.deleteDonorMessagePreview p:last-child{margin-bottom:0}
+@media(max-width:700px){.deleteDonorMessagePreview{max-height:300px}.modalFoot .whatsappBtn{width:100%}}

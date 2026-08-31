@@ -1465,3 +1465,94 @@ $$;
 
 grant execute on function public.super_admin_delete_receipt(uuid) to authenticated;
 
+
+
+-- RYM_VARGANI V1.7.4.0
+-- Allows an authenticated organization member to confirm the donor's
+-- current-year expected/final donation amount during collection.
+
+create or replace function public.set_donor_current_expected(
+  p_donor_id uuid,
+  p_expected_amount numeric
+)
+returns void
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  v_org_id uuid;
+begin
+  if p_expected_amount < 0 then
+    raise exception 'Expected amount cannot be negative';
+  end if;
+
+  select organization_id into v_org_id
+  from public.donors
+  where id=p_donor_id;
+
+  if v_org_id is null then
+    raise exception 'Donor not found';
+  end if;
+
+  if not exists (
+    select 1
+    from public.organization_members
+    where organization_id=v_org_id
+      and user_id=auth.uid()
+      and active=true
+  ) then
+    raise exception 'You are not authorized for this organization';
+  end if;
+
+  update public.donors
+  set current_expected_amount=p_expected_amount,
+      updated_at=now()
+  where id=p_donor_id;
+end
+$$;
+
+grant execute on function public.set_donor_current_expected(uuid,numeric) to authenticated;
+
+
+-- RYM_VARGANI V1.7.4.1
+-- Treasurer, Admin and Super Admin/Owner may soft-remove an individual donor.
+
+create or replace function public.admin_remove_donor(p_donor_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  d_org uuid;
+  member_role text;
+begin
+  select organization_id into d_org
+  from public.donors
+  where id=p_donor_id and active=true;
+
+  if d_org is null then
+    raise exception 'Donor not found';
+  end if;
+
+  select role::text into member_role
+  from public.organization_members
+  where organization_id=d_org
+    and user_id=auth.uid()
+    and active=true
+  limit 1;
+
+  if coalesce(lower(trim(member_role)),'') not in
+     ('owner','super admin','super_admin','superadmin','admin','treasurer') then
+    raise exception 'Only Treasurer, Admin or Super Admin can delete a donor';
+  end if;
+
+  update public.donors
+  set active=false,
+      updated_at=now()
+  where id=p_donor_id;
+end
+$$;
+
+grant execute on function public.admin_remove_donor(uuid) to authenticated;

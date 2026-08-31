@@ -668,6 +668,7 @@ function Reports({donors,receipts,canDownload}:{donors:Donor[],receipts:Receipt[
  const [pendingRouteExport,setPendingRouteExport]=useState('All Routes')
  const [receiptUsageExpanded,setReceiptUsageExpanded]=useState(false)
  const [reducedDonationExpanded,setReducedDonationExpanded]=useState(false)
+ const [increasedDonationExpanded,setIncreasedDonationExpanded]=useState(false)
  const [receiptUsageFilter,setReceiptUsageFilter]=useState<'all'|'used'|'unused'>('all')
  const total=receipts.filter(r=>r.paymentStatus==='paid').reduce((sum,r)=>sum+r.amount,0),pending=donors.reduce((sum,d)=>sum+donorPendingAmount(d),0)
  const numericReceipts=receipts.map(r=>({receipt:r,no:Number.parseInt(String(r.receiptNo).trim(),10)})).filter(x=>Number.isInteger(x.no)&&String(x.no)===String(x.receipt.receiptNo).trim()&&x.no>=101&&x.no<=400)
@@ -689,6 +690,33 @@ function Reports({donors,receipts,canDownload}:{donors:Donor[],receipts:Receipt[
   .filter(d=>d.received>0&&d.lastYear>0&&d.received<d.lastYear)
   .sort((a,b)=>(b.lastYear-b.received)-(a.lastYear-a.received))
  const reducedDonationTotal=reducedDonationDonors.reduce((sum,d)=>sum+(d.lastYear-d.received),0)
+ const increasedOrNewDonors=donors
+  .filter(d=>d.received>0&&(d.lastYear<=0||d.received>d.lastYear))
+  .sort((a,b)=>(b.received-b.lastYear)-(a.received-a.lastYear))
+ const newDonors=increasedOrNewDonors.filter(d=>d.lastYear<=0)
+ const increasedDonors=increasedOrNewDonors.filter(d=>d.lastYear>0&&d.received>d.lastYear)
+ const increasedDonationTotal=increasedDonors.reduce((sum,d)=>sum+(d.received-d.lastYear),0)
+
+ async function downloadIncreasedDonationExcel(){
+  const XLSX=await import('xlsx')
+  if(!increasedOrNewDonors.length)return alert('No new donors or donors with increased donation found.')
+  const rows=increasedOrNewDonors.map((d,i)=>({
+   'SrNo':i+1,
+   'Donor Name':d.name,
+   'Mobile Number':d.mobile||'',
+   'Route':d.route||'Unassigned',
+   'Last Year Donation':d.lastYear||0,
+   'This Year Donation':d.received,
+   'Increase':d.lastYear>0?d.received-d.lastYear:d.received,
+   'Category':d.lastYear<=0?'New Donor':'Increased Donation'
+  }))
+  const ws=XLSX.utils.json_to_sheet(rows,{header:['SrNo','Donor Name','Mobile Number','Route','Last Year Donation','This Year Donation','Increase','Category']})
+  ws['!cols']=[{wch:8},{wch:32},{wch:18},{wch:24},{wch:20},{wch:20},{wch:16},{wch:20}]
+  const wb=XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb,ws,'New and Increased Donors')
+  XLSX.writeFile(wb,`RYM_VARGANI-New-Increased-Donation-Report-${new Date().toISOString().slice(0,10)}.xlsx`)
+ }
+
 
  async function downloadReducedDonationExcel(){
   const XLSX=await import('xlsx')
@@ -853,6 +881,33 @@ function Reports({donors,receipts,canDownload}:{donors:Donor[],receipts:Receipt[
     <td><b>{money(d.received)}</b></td>
     <td>{money(d.lastYear-d.received)}</td>
     <td><StatusPill status="Collected"/></td>
+   </tr>)}</tbody>
+  </table></div>
+ </section>}
+
+<section className="card reportDownloadCard expandableReportHead">
+  <button type="button" className="reportExpandButton" onClick={()=>setIncreasedDonationExpanded(v=>!v)} aria-expanded={increasedDonationExpanded}>
+   <div><b>New Donors / Increased Donation</b><small>{increasedOrNewDonors.length} donor(s) · New donors and donors giving more than last year · {increasedDonationExpanded?'Click to collapse':'Click to expand'}</small></div>
+   <span className="expandChevron">{increasedDonationExpanded?'▲':'▼'}</span>
+  </button>
+  {increasedDonationExpanded&&<div className="receiptUsageSummary">
+   <div><small>New Donors</small><b>{newDonors.length}</b></div>
+   <div><small>Increased Donors</small><b>{increasedDonors.length}</b></div>
+   <div><small>Total Increase</small><b>{money(increasedDonationTotal)}</b></div>
+  </div>}
+ </section>
+ {increasedDonationExpanded&&<section className="card collectionReportCard">
+  <div className="tableHead">
+   <div><b>New Donors / Increased Donation Report</b><small>New Donor = Last Year Donation ₹0 and donation received this year. Increased Donation = This Year Donation is greater than Last Year Donation.</small></div>
+   {canDownload&&<button className="primary" onClick={downloadIncreasedDonationExcel}>↓ Download Excel</button>}
+  </div>
+  <div className="tableWrap"><table>
+   <thead><tr><th>Sr No.</th><th>Donor</th><th>Mobile</th><th>Route</th><th>Last Year</th><th>This Year</th><th>Increase</th><th>Category</th></tr></thead>
+   <tbody>{increasedOrNewDonors.map((d,i)=><tr key={`increased-${d.id}`}>
+    <td>{i+1}</td><td><b>{d.name}</b></td><td>{d.mobile||'—'}</td><td>{d.route||'Unassigned'}</td>
+    <td>{money(d.lastYear)}</td><td><b>{money(d.received)}</b></td>
+    <td>{money(d.lastYear>0?d.received-d.lastYear:d.received)}</td>
+    <td><b>{d.lastYear<=0?'New Donor':'Increased Donation'}</b></td>
    </tr>)}</tbody>
   </table></div>
  </section>}

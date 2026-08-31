@@ -597,6 +597,7 @@ function DaywiseReport({receipts,date,setDate}:{receipts:Receipt[],date:string,s
  </> }
 function Reports({donors,receipts,canDownload}:{donors:Donor[],receipts:Receipt[],canDownload:boolean}){
  const [collectionExpanded,setCollectionExpanded]=useState(false)
+ const [pendingRouteExport,setPendingRouteExport]=useState('All Routes')
  const [receiptUsageExpanded,setReceiptUsageExpanded]=useState(false)
  const [receiptUsageFilter,setReceiptUsageFilter]=useState<'all'|'used'|'unused'>('all')
  const total=receipts.filter(r=>r.paymentStatus==='paid').reduce((sum,r)=>sum+r.amount,0),pending=donors.reduce((sum,d)=>sum+Math.max(0,d.expected-d.received),0)
@@ -615,6 +616,77 @@ function Reports({donors,receipts,canDownload}:{donors:Donor[],receipts:Receipt[
  const visibleReceiptUsageRows=receiptUsageRows.filter(x=>receiptUsageFilter==='all'?true:receiptUsageFilter==='used'?x.status==='Used':x.status==='Unused')
  const modes=['Cash','UPI','Bank','Cheque','Receipt Given - Payment Pending'].map(mode=>({mode,amount:mode==='Receipt Given - Payment Pending'?receipts.filter(r=>r.paymentStatus==='receipt_pending').reduce((sum,r)=>sum+r.amount,0):receipts.filter(r=>r.paymentStatus==='paid'&&r.mode.toLowerCase()===mode.toLowerCase()).reduce((sum,r)=>sum+r.amount,0)}))
  const routeNames=Array.from(new Set(donors.map(d=>d.route).filter(Boolean)))
+
+
+ async function downloadRoutewisePendingExcel(){
+  const XLSX=await import('xlsx')
+  const pendingDonors=donors.filter(d=>Math.max(0,d.expected-d.received)>0)
+
+  if(pendingRouteExport==='All Routes'){
+   if(!pendingDonors.length)return alert('No pending donors found.')
+
+   const wb=XLSX.utils.book_new()
+   const usedSheetNames=new Set<string>()
+
+   const safeSheetName=(raw:string)=>{
+    const base=(raw||'Unassigned').replace(/[\\/?*\[\]:]/g,' ').replace(/\s+/g,' ').trim().slice(0,31)||'Unassigned'
+    let name=base
+    let n=2
+    while(usedSheetNames.has(name)){
+     const suffix=` (${n++})`
+     name=(base.slice(0,31-suffix.length)+suffix)
+    }
+    usedSheetNames.add(name)
+    return name
+   }
+
+   const grouped=new Map<string,Donor[]>()
+   for(const donor of pendingDonors){
+    const route=(donor.route||'Unassigned').trim()||'Unassigned'
+    if(!grouped.has(route))grouped.set(route,[])
+    grouped.get(route)!.push(donor)
+   }
+
+   const routesSorted=Array.from(grouped.keys()).sort((a,b)=>a.localeCompare(b,'en',{numeric:true,sensitivity:'base'}))
+   for(const route of routesSorted){
+    const rows=(grouped.get(route)||[])
+     .sort((a,b)=>a.name.localeCompare(b.name,'en',{sensitivity:'base'}))
+     .map((d,i)=>({
+      'SrNo':i+1,
+      'Donor Name':d.name,
+      'Mobile Number':d.mobile||'',
+      'Last Year Donation':d.lastYear||0
+     }))
+
+    const ws=XLSX.utils.json_to_sheet(rows,{header:['SrNo','Donor Name','Mobile Number','Last Year Donation']})
+    ws['!cols']=[{wch:8},{wch:32},{wch:18},{wch:20}]
+    XLSX.utils.book_append_sheet(wb,ws,safeSheetName(route))
+   }
+
+   XLSX.writeFile(wb,`RYM_VARGANI-All-Routes-Pending-Donors-${new Date().toISOString().slice(0,10)}.xlsx`)
+   return
+  }
+
+  const routeRows=pendingDonors
+   .filter(d=>(d.route||'Unassigned')===pendingRouteExport)
+   .sort((a,b)=>a.name.localeCompare(b.name,'en',{sensitivity:'base'}))
+
+  if(!routeRows.length)return alert(`No pending donors found in ${pendingRouteExport}.`)
+
+  const rows=routeRows.map((d,i)=>({
+   'SrNo':i+1,
+   'Donor Name':d.name,
+   'Mobile Number':d.mobile||'',
+   'Last Year Donation':d.lastYear||0
+  }))
+
+  const ws=XLSX.utils.json_to_sheet(rows,{header:['SrNo','Donor Name','Mobile Number','Last Year Donation']})
+  ws['!cols']=[{wch:8},{wch:32},{wch:18},{wch:20}]
+  const wb=XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb,ws,(pendingRouteExport||'Route').replace(/[\\/?*\[\]:]/g,' ').slice(0,31))
+  XLSX.writeFile(wb,`RYM_VARGANI-${pendingRouteExport.replace(/\s+/g,'-')}-Pending-Donors-${new Date().toISOString().slice(0,10)}.xlsx`)
+ }
+
  async function downloadExcel(){
   const XLSX=await import('xlsx')
   const rows=receipts.map((r,i)=>{
@@ -647,7 +719,21 @@ function Reports({donors,receipts,canDownload}:{donors:Donor[],receipts:Receipt[
  </section>
  {collectionExpanded&&<section className="card collectionReportCard"><div className="tableWrap"><table><thead><tr><th>Sr No.</th><th>Donor</th><th>Contact</th><th>PAN</th><th>Receipt No.</th><th>Receipt Date</th><th>Collection Date</th><th>Area</th><th>Mode</th><th>Amount</th></tr></thead><tbody>{receipts.map((r,i)=>{const donor=donors.find(d=>d.id===r.donorId);return <tr key={r.id}><td>{i+1}</td><td>{r.donorName}</td><td>{donor?.mobile||r.mobile}</td><td>{r.pan||donor?.pan||'—'}</td><td>{r.receiptNo}</td><td>{r.date}</td><td>{r.paymentReceivedDate||r.date}</td><td>{r.areaName||donor?.route}</td><td>{r.paymentStatus==='receipt_pending'?'Receipt Given - Payment Pending':r.mode}</td><td><b>{money(r.amount)}</b></td></tr>})}</tbody></table></div></section>}
 
- <section className="card reportDownloadCard expandableReportHead receiptUsageReport">
+ {canDownload&&<section className="card reportDownloadCard">
+  <div className="tableHead">
+   <div><b>Pending Donors Excel</b><small>Select All Routes for one workbook with route-wise tabs, or select a route for that route's pending donors only.</small></div>
+   <div className="dayFilterControls">
+    <select value={pendingRouteExport} onChange={e=>setPendingRouteExport(e.target.value)}>
+     <option>All Routes</option>
+     {routeNames.map(route=><option key={`pending-export-${route}`} value={route}>{route}</option>)}
+     {donors.some(d=>!(d.route||'').trim())&&<option value="Unassigned">Unassigned</option>}
+    </select>
+    <button className="primary" onClick={downloadRoutewisePendingExcel}>↓ Download Excel</button>
+   </div>
+  </div>
+ </section>}
+
+<section className="card reportDownloadCard expandableReportHead receiptUsageReport">
   <button type="button" className="reportExpandButton" onClick={()=>setReceiptUsageExpanded(v=>!v)} aria-expanded={receiptUsageExpanded}>
    <div><b>Receipt Number Usage Report (101–400)</b><small>Used numbers and missing / unused receipt numbers below the highest generated receipt · {receiptUsageExpanded?'Click to collapse':'Click to expand'}</small></div>
    <span className="expandChevron">{receiptUsageExpanded?'▲':'▼'}</span>

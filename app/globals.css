@@ -743,3 +743,9 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
 .memberSearchBar input{flex:1;min-width:240px}
 .memberSearchBar small{white-space:nowrap}
 @media(max-width:700px){.memberSearchBar{display:grid;grid-template-columns:1fr auto}.memberSearchBar input{min-width:0;width:100%}.memberSearchBar small{grid-column:1/-1}}
+
+/* V1.7.5.5 mobile member management */
+@media(max-width:700px){
+ .donorCard .rowActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:190px}
+ .donorCard .rowActions button{width:100%;min-height:40px;white-space:nowrap}
+}

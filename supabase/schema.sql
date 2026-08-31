@@ -1556,3 +1556,5 @@ end
 $$;
 
 grant execute on function public.admin_remove_donor(uuid) to authenticated;
+
+-- RYM_VARGANI V1.7.4.6 is applied by supabase/upgrade-v1.7.4.6.sql.

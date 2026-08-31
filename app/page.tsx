@@ -157,6 +157,14 @@ export default function Home(){
  async function bulkDeleteDonors(){if(!supabase||!isSuperAdmin||!selectedDonorIds.length)return;if(!window.confirm(`${L.confirmBulkDelete}\n\n${selectedDonorIds.length} donor(s)`))return;for(const id of selectedDonorIds){const {error}=await supabase.rpc('admin_remove_donor',{p_donor_id:id});if(error){alert(error.message);return}}setSelectedDonorIds([]);await loadAll()}
  async function changeSelectedDonorRoute(routeId:string){if(!selected)return;await changeDonorRoute(selected.id,routeId);const r=routes.find(x=>x.id===routeId);setSelected({...selected,routeId,route:r?.name||''});setCollectRouteEdit(false)}
  function openCollection(d:Donor){
+  const existingReceipt=receipts
+   .filter(r=>r.donorId===d.id)
+   .sort((a,b)=>Number(b.receiptNo)-Number(a.receiptNo))[0]
+  if(existingReceipt){
+   const createdBy=existingReceipt.collector||'another user'
+   alert(`Receipt is already created for ${d.name}.\n\nReceipt No.: ${existingReceipt.receiptNo}\nPayment Method: ${existingReceipt.mode}\nCreated By: ${createdBy}\n\nPlease do not create another receipt.${existingReceipt.paymentStatus==='receipt_pending'?' Use Mark Payment on the existing receipt when payment is received.':''}`)
+   return
+  }
   if(d.status==='Collected')return
   setSelected(d);setCollectRouteEdit(false);resetForm();
   setForm(f=>({...f,amount:String(Math.max(0,d.expected-d.received)||(d.lastYear>0?d.lastYear:'')),pan:d.pan,finalDonation:true}));

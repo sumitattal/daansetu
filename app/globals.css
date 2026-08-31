@@ -738,3 +738,8 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
 }
 
 @media(max-width:700px){.expenseTabs{grid-template-columns:1fr!important}.expenseTabs button{width:100%}}
+
+.memberSearchBar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0 16px}
+.memberSearchBar input{flex:1;min-width:240px}
+.memberSearchBar small{white-space:nowrap}
+@media(max-width:700px){.memberSearchBar{display:grid;grid-template-columns:1fr auto}.memberSearchBar input{min-width:0;width:100%}.memberSearchBar small{grid-column:1/-1}}

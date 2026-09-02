@@ -762,3 +762,31 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
 .adminAccordion[open]>summary:after{transform:rotate(180deg)}
 .adminAccordion>summary small{margin-left:auto;font-weight:500;opacity:.65}
 .adminAccordionBody{margin:0!important;border:0!important;border-top:1px solid #edf1ef!important;border-radius:0!important;box-shadow:none!important}
+
+/* V1.7.5.7 — dashboard card polish */
+.dashboardStats .clickableStat{
+ border:1px solid rgba(24,83,64,.12);
+ background:linear-gradient(145deg,#ffffff 0%,#f7fbf9 100%);
+ box-shadow:0 5px 16px rgba(24,83,64,.07);
+ overflow:hidden;
+}
+.dashboardStats .clickableStat:before{
+ content:'';
+ position:absolute;
+ left:0;top:0;bottom:0;
+ width:4px;
+ background:currentColor;
+ opacity:.35;
+}
+.dashboardStats .clickableStat:hover{
+ transform:translateY(-3px);
+ box-shadow:0 10px 24px rgba(24,83,64,.12);
+ border-color:rgba(24,83,64,.22);
+}
+.dashboardStats .clickableStat:active{transform:translateY(-1px)}
+.dashboardStats .clickableStat .statIcon{
+ transform:scale(1.06);
+ box-shadow:0 4px 12px rgba(0,0,0,.06);
+}
+.dashboardStats .clickableStat small{font-weight:650;letter-spacing:.1px}
+.dashboardStats .clickableStat strong{letter-spacing:-.2px}

@@ -749,3 +749,16 @@ button,.smallBtn,.ghost,.primary,.langBtn{touch-action:manipulation}
  .donorCard .rowActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:190px}
  .donorCard .rowActions button{width:100%;min-height:40px;white-space:nowrap}
 }
+
+/* V1.7.5.6 */
+.clickableStat{cursor:pointer;position:relative;transition:transform .15s ease,box-shadow .15s ease}
+.clickableStat:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.08)}
+.clickableStat:focus-visible{outline:3px solid rgba(31,117,87,.28);outline-offset:2px}
+.statArrow{margin-left:auto;font-size:28px;opacity:.45}
+.adminAccordion{border:1px solid #e1e7e4;border-radius:14px;background:#fff;margin-bottom:14px;overflow:hidden}
+.adminAccordion>summary{list-style:none;cursor:pointer;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700}
+.adminAccordion>summary::-webkit-details-marker{display:none}
+.adminAccordion>summary:after{content:'▾';font-size:18px;transition:transform .18s ease}
+.adminAccordion[open]>summary:after{transform:rotate(180deg)}
+.adminAccordion>summary small{margin-left:auto;font-weight:500;opacity:.65}
+.adminAccordionBody{margin:0!important;border:0!important;border-top:1px solid #edf1ef!important;border-radius:0!important;box-shadow:none!important}

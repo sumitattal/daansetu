@@ -531,13 +531,13 @@ const [routes,setRoutes]=useState<RouteRow[]>([]);const [donors,setDonors]=useSt
 
  const stats=useMemo(()=>{const expected=donors.reduce((s,d)=>s+d.expected,0),received=donors.reduce((s,d)=>s+d.received,0);return{expected,received,pending:Math.max(0,expected-received),count:donors.length,progress:expected?Math.min(100,Math.round(received/expected*100)):0}},[donors])
  const pendingReceiptByDonor=useMemo(()=>{const map=new Map<string,Receipt>();for(const r of receipts){if(r.paymentStatus==='receipt_pending'&&r.donorId&&!map.has(r.donorId))map.set(r.donorId,r)}return map},[receipts])
- const pendingDonorCount=useMemo(()=>donors.filter(d=>d.status!=='Collected'&&!pendingReceiptByDonor.has(d.id)).length,[donors,pendingReceiptByDonor])
+ const pendingDonorCount=useMemo(()=>donors.filter(d=>d.status==='Pending'&&!pendingReceiptByDonor.has(d.id)).length,[donors,pendingReceiptByDonor])
  const receiptPaymentPendingAmount=useMemo(()=>receipts.filter(r=>r.paymentStatus==='receipt_pending').reduce((sum,r)=>sum+r.amount,0),[receipts])
  const membershipFeeCollectedAmount=useMemo(()=>members.reduce((sum,m)=>sum+m.annualFeePaid,0),[members])
  const membershipFeePaidCount=useMemo(()=>members.filter(m=>m.annualFee>0&&m.annualFeePaid>=m.annualFee).length,[members])
  const membershipFeeTotalMembers=members.length
  const donationPlusMembershipTotal=stats.received+membershipFeeCollectedAmount
- const shown=donors.filter(d=>(active!=='route'||((!selectedRoute||d.routeId===selectedRoute)&&d.status!=='Collected'&&!pendingReceiptByDonor.has(d.id)))&&(active!=='pending'||(d.status!=='Collected'&&(!pendingRoute||d.routeId===pendingRoute)))&&searchMatches(q,d.name,d.contactPerson,d.mobile,d.route,d.reference,d.pan,d.lastYearReceipt)).sort((a,b)=>active==='pending'?((a.route||'').localeCompare(b.route||'',undefined,{sensitivity:'base'})||(a.name||'').localeCompare(b.name||'',undefined,{sensitivity:'base'})):0)
+ const shown=donors.filter(d=>(active!=='route'||((!selectedRoute||d.routeId===selectedRoute)&&d.status!=='Collected'&&!pendingReceiptByDonor.has(d.id)))&&(active!=='pending'||(d.status==='Pending'&&!pendingReceiptByDonor.has(d.id)&&(!pendingRoute||d.routeId===pendingRoute)))&&searchMatches(q,d.name,d.contactPerson,d.mobile,d.route,d.reference,d.pan,d.lastYearReceipt)).sort((a,b)=>active==='pending'?((a.route||'').localeCompare(b.route||'',undefined,{sensitivity:'base'})||(a.name||'').localeCompare(b.name||'',undefined,{sensitivity:'base'})):0)
 
  if(!supabase)return <div className="loginPage"><div className="loginCard"><h1>RYM_VARGANI</h1><p>Supabase is not configured. Copy <b>.env.example</b> to <b>.env.local</b> and add your Supabase keys.</p></div></div>
  if(loading)return <div className="loginPage"><div className="loginCard"><h1>RYM_VARGANI</h1><p>Loading live database…</p></div></div>
@@ -545,7 +545,9 @@ const [routes,setRoutes]=useState<RouteRow[]>([]);const [donors,setDonors]=useSt
 
  async function downloadAllRoutesConsolidatedPendingExcel(){
   const XLSX=await import('xlsx')
-  const pendingRows=donors.filter(d=>d.received<=0).sort((a,b)=>(a.route||'').localeCompare(b.route||'','en',{numeric:true,sensitivity:'base'})||a.name.localeCompare(b.name,'en',{sensitivity:'base'}))
+  const pendingRows=donors
+   .filter(d=>d.status==='Pending'&&!pendingReceiptByDonor.has(d.id))
+   .sort((a,b)=>(a.route||'').localeCompare(b.route||'','en',{numeric:true,sensitivity:'base'})||a.name.localeCompare(b.name,'en',{sensitivity:'base'}))
   if(!pendingRows.length)return alert('No pending donors found.')
   const rows=pendingRows.map((d,i)=>({
    'SrNo.':i+1,
@@ -898,7 +900,8 @@ function Reports({donors,receipts,canDownload}:{donors:Donor[],receipts:Receipt[
 
  async function downloadRoutewisePendingExcel(){
   const XLSX=await import('xlsx')
-  const pendingDonors=donors.filter(d=>d.received<=0)
+  const pendingReceiptDonorIds=new Set(receipts.filter(r=>r.paymentStatus==='receipt_pending').map(r=>r.donorId).filter(Boolean))
+  const pendingDonors=donors.filter(d=>d.status==='Pending'&&!pendingReceiptDonorIds.has(d.id))
 
   if(pendingRouteExport==='All Routes Consolidated'){
    if(!pendingDonors.length)return alert('No pending donors found.')

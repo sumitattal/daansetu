@@ -667,10 +667,15 @@ function DaywiseReport({receipts,date,setDate}:{receipts:Receipt[],date:string,s
  const [modeFilter,setModeFilter]=useState('All')
  const [reportView,setReportView]=useState<'summary'|'detailed'>('summary')
  const display=date.split('-').reverse().join('-')
- const paidRows=receipts.filter(r=>r.paymentStatus==='paid'&&r.paymentReceivedDate===display)
+ // For a normal paid receipt, payment_received_date can be blank in older/current records.
+ // In that case its receipt/payment date is the actual collection date.
+ // For a previously pending receipt that is settled later, paymentReceivedDate is present
+ // and must control which day's collection it belongs to.
+ const collectionDate=(r:Receipt)=>r.paymentReceivedDate||r.date
+ const paidRows=receipts.filter(r=>r.paymentStatus==='paid'&&collectionDate(r)===display)
  const pendingRows=receipts.filter(r=>r.paymentStatus==='receipt_pending'&&r.date===display)
  const total=(mode:string)=>paidRows.filter(r=>r.mode.toLowerCase()===mode.toLowerCase()).reduce((sum,r)=>sum+r.amount,0)
- const cash=total('Cash'),upi=total('UPI'),cheque=total('Cheque'),pending=pendingRows.reduce((sum,r)=>sum+r.amount,0),dayTotal=cash+upi+cheque
+ const cash=total('Cash'),upi=total('UPI'),bank=total('Bank'),cheque=total('Cheque'),pending=pendingRows.reduce((sum,r)=>sum+r.amount,0),dayTotal=cash+upi+bank+cheque
  const receiptsIssuedToday=receipts.filter(r=>r.date===display).length
  const allRows=[...paidRows,...pendingRows]
  const rows=modeFilter==='All'?allRows:modeFilter==='Receipt Given - Payment Pending'?pendingRows:paidRows.filter(r=>r.mode.toLowerCase()===modeFilter.toLowerCase())
@@ -689,6 +694,7 @@ function DaywiseReport({receipts,date,setDate}:{receipts:Receipt[],date:string,s
   <section className="stats dayStats">
    <Stat label="Cash Collection" value={money(cash)} icon="₹"/>
    <Stat label="UPI Collection" value={money(upi)} icon="↗" accent/>
+   <Stat label="Bank Collection" value={money(bank)} icon="▣"/>
    <Stat label="Cheque Collection" value={money(cheque)} icon="▤"/>
    <Stat label="Receipt Issued - Payment Pending" value={money(pending)} icon="⌛" warn/>
    <Stat label="Total Day's Collection" value={money(dayTotal)} icon="Σ" accent/>

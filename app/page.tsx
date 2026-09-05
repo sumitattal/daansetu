@@ -639,7 +639,9 @@ function ReceiptCentre({receipts,only80g,onView,onEdit,canDelete,onDelete}:{rece
 function ReceiptDesign({receipt}:{receipt:Receipt}){const [dd='',mm='',yyyy='']=receipt.date.split('-');return <div className="receiptPrintArea"><div className="receiptCanvas"><img src="/rym-receipt-template.jpeg" alt="Donation receipt"/><div className="rv rvNo">{receipt.receiptNo}</div><div className="rv rvDate">{dd} / {mm} / {yyyy}</div><div className="rv rvName">{receipt.donorName}</div>{receipt.mobile&&<div className="rv rvMobile">{receipt.mobile}</div>}{receipt.pan&&<div className="rv rvPan">{receipt.pan}</div>}<div className="rv rvWords">{receipt.amountWords}</div><div className="rv rvAmount">₹ {new Intl.NumberFormat('en-IN').format(receipt.amount)}/-</div>{receipt.mode.toLowerCase()==='cheque'&&<><div className="rv rvCheque">{receipt.chequeNo}</div>{receipt.bankName&&<div className="rv rvBank">{receipt.bankName}</div>}</>}<div className="rv rvCollector">{receipt.collector}</div></div></div>}
 
 function DatewiseGraph({receipts}:{receipts:Receipt[]}){
- const paid=receipts.filter(r=>r.paymentStatus==='paid'&&r.paymentReceivedDate);const by=new Map<string,number>();for(const r of paid)by.set(r.paymentReceivedDate,(by.get(r.paymentReceivedDate)||0)+r.amount)
+ const dateKey=(v:string)=>{const [d,m,y]=String(v||'').split('-');return y&&m&&d?`${y}-${m}-${d}`:''}
+ const effectiveDate=(r:Receipt)=>!r.paymentReceivedDate?r.date:(dateKey(r.paymentReceivedDate)>=dateKey(r.date)?r.paymentReceivedDate:r.date)
+ const paid=receipts.filter(r=>r.paymentStatus==='paid');const by=new Map<string,number>();for(const r of paid){const d=effectiveDate(r);if(d)by.set(d,(by.get(d)||0)+r.amount)}
  const rows=Array.from(by.entries()).sort((a,b)=>{const pa=a[0].split('-').reverse().join('-'),pb=b[0].split('-').reverse().join('-');return pb.localeCompare(pa)}).slice(0,14);const max=Math.max(1,...rows.map(x=>x[1]))
  return <section className="card dateGraph"><div className="tableHead"><div><b>Date-wise Collection</b><small>Paid collection by actual payment received date</small></div></div><div className="graphBars">{rows.length?rows.map(([date,amount])=><div className="graphCol" key={date}><div className="barValue">{money(amount)}</div><div className="barTrack"><span style={{height:`${Math.max(5,Math.round(amount/max*100))}%`}}/></div><small>{date.slice(0,5)}</small></div>):<div className="empty">No collection data yet.</div>}</div></section>
 }
@@ -667,11 +669,21 @@ function DaywiseReport({receipts,date,setDate}:{receipts:Receipt[],date:string,s
  const [modeFilter,setModeFilter]=useState('All')
  const [reportView,setReportView]=useState<'summary'|'detailed'>('summary')
  const display=date.split('-').reverse().join('-')
- // For a normal paid receipt, payment_received_date can be blank in older/current records.
- // In that case its receipt/payment date is the actual collection date.
- // For a previously pending receipt that is settled later, paymentReceivedDate is present
- // and must control which day's collection it belongs to.
- const collectionDate=(r:Receipt)=>r.paymentReceivedDate||r.date
+ // Day-wise effective collection date.
+ // Normal receipt: receipt/payment date.
+ // Pending receipt settled later: whichever is later between payment date and payment-received date.
+ // This also repairs older records where settle_pending_payment updated payment_date instead
+ // of payment_received_date, or where payment_received_date contains an older stale value.
+ const isoDateKey=(v:string)=>{
+  const parts=String(v||'').split('-')
+  if(parts.length!==3)return ''
+  const [dd,mm,yyyy]=parts
+  return `${yyyy}-${mm}-${dd}`
+ }
+ const collectionDate=(r:Receipt)=>{
+  if(!r.paymentReceivedDate)return r.date
+  return isoDateKey(r.paymentReceivedDate)>=isoDateKey(r.date)?r.paymentReceivedDate:r.date
+ }
  const paidRows=receipts.filter(r=>r.paymentStatus==='paid'&&collectionDate(r)===display)
  const pendingRows=receipts.filter(r=>r.paymentStatus==='receipt_pending'&&r.date===display)
  const total=(mode:string)=>paidRows.filter(r=>r.mode.toLowerCase()===mode.toLowerCase()).reduce((sum,r)=>sum+r.amount,0)
@@ -682,7 +694,7 @@ function DaywiseReport({receipts,date,setDate}:{receipts:Receipt[],date:string,s
  const displayMode=(r:Receipt)=>r.paymentStatus==='receipt_pending'?'Receipt Given - Payment Pending':r.mode
  return <>
   <section className="card dayFilter">
-   <div><b>Day-wise Collection Report</b><small>Paid amounts use Payment Received Date; pending receipts use Receipt Date</small></div>
+   <div><b>Day-wise Collection Report</b><small>Normal receipts use Receipt Date; settled pending receipts use the later Payment Received Date</small></div>
    <div className="dayFilterControls">
     <input type="date" value={date} onChange={e=>setDate(e.target.value)}/>
     <select value={modeFilter} onChange={e=>setModeFilter(e.target.value)}>
